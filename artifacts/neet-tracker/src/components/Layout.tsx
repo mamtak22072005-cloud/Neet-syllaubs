@@ -46,9 +46,23 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           {children}
         </main>
 
-        <footer className="py-8 text-center opacity-80 pb-12">
-          <p className="text-xs font-medium text-muted-foreground tracking-widest uppercase">Created by</p>
-          <p className="text-sm font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary via-accent to-secondary text-glow">
+        <footer className="pb-12 pt-2 px-6 text-center">
+          <div className="h-px w-full rounded-full mb-6 opacity-40"
+            style={{ background: 'linear-gradient(90deg, transparent, hsl(var(--primary)/0.6), hsl(var(--secondary)/0.6), transparent)' }}
+          />
+          <p className="text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground/60 mb-1">
+            Created by
+          </p>
+          <p
+            className="text-sm font-display font-black tracking-wide"
+            style={{
+              background: 'linear-gradient(90deg, hsl(var(--primary)), hsl(var(--accent)), hsl(var(--secondary)))',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              filter: 'drop-shadow(0 0 8px hsl(var(--primary)/0.4))',
+            }}
+          >
             NEERAJ NEERALA
           </p>
         </footer>

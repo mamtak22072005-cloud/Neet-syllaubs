@@ -125,11 +125,6 @@ export const Home: React.FC = () => {
         </div>
       </motion.div>
 
-      {/* ── NEET 2027 Countdown ── */}
-      <motion.div variants={itemVariants}>
-        <Countdown />
-      </motion.div>
-
       {/* ── Daily Motivation ── */}
       <motion.div variants={itemVariants} className="glass-panel relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-violet-600/15 via-purple-500/8 to-cyan-500/15 pointer-events-none" />
@@ -250,6 +245,11 @@ export const Home: React.FC = () => {
             );
           })}
         </div>
+      </motion.div>
+
+      {/* ── NEET 2027 Countdown ── */}
+      <motion.div variants={itemVariants}>
+        <Countdown />
       </motion.div>
 
       {/* ── Today's Tasks Preview ── */}
