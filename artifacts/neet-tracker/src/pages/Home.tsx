@@ -4,6 +4,7 @@ import { useStore } from '@/hooks/use-store';
 import { SYLLABUS, SubjectId } from '@/lib/syllabus';
 import { ProgressCircle } from '@/components/ProgressCircle';
 import { ProgressBar } from '@/components/ProgressBar';
+import { Countdown } from '@/components/Countdown';
 import { Flame, CheckCircle2, ChevronRight, ListTodo, Atom, FlaskConical, Leaf, Dna, Stethoscope, Quote } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
@@ -23,8 +24,6 @@ const DOCTOR_QUOTES = [
   { quote: "The best doctor gives the least medicines.", author: "Benjamin Franklin" },
   { quote: "Every human being is the author of his own health or disease.", author: "Buddha" },
   { quote: "It is health that is real wealth and not pieces of gold and silver.", author: "Mahatma Gandhi" },
-  { quote: "The doctor sees all the weakness of mankind; the lawyer all the wickedness, the theologian all the stupidity.", author: "Arthur Schopenhauer" },
-  { quote: "Medicine heals doubts as well as diseases.", author: "Karl Marx" },
   { quote: "A physician is obligated to consider more than a diseased organ, more even than the whole man — he must view the man in his world.", author: "Harvey Cushing" },
   { quote: "The secret of the care of the patient is in caring for the patient.", author: "Francis Peabody" },
   { quote: "In nothing do men more nearly approach the gods than in giving health to men.", author: "Marcus Tullius Cicero" },
@@ -39,6 +38,8 @@ const DOCTOR_QUOTES = [
   { quote: "Believe in yourself. You are one NEET score away from changing lives.", author: "Anonymous" },
   { quote: "Discipline is the bridge between NEET goals and NEET achievement.", author: "Anonymous" },
   { quote: "Your stethoscope awaits. Keep going.", author: "Anonymous" },
+  { quote: "Sleep less, dream more — and study in between.", author: "Anonymous" },
+  { quote: "Success in NEET is not luck. It is the result of daily consistency.", author: "Anonymous" },
 ];
 
 const subjectIcons: Record<SubjectId, React.ReactNode> = {
@@ -72,88 +73,99 @@ export const Home: React.FC = () => {
 
   const containerVariants = {
     hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: { staggerChildren: 0.1 }
-    }
+    show: { opacity: 1, transition: { staggerChildren: 0.09 } }
   };
 
   const itemVariants = {
-    hidden: { opacity: 0, y: 24 },
-    show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 280, damping: 22 } }
+    hidden: { opacity: 0, y: 26 },
+    show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 260, damping: 20 } }
   };
 
   return (
-    <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="show"
-      className="space-y-5"
-    >
+    <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-4">
 
-      {/* Hero: Total Progress */}
-      <motion.div variants={itemVariants} className="glass-panel p-7 flex flex-col items-center text-center space-y-5 relative overflow-hidden">
+      {/* ── Hero: NEET 2027 + Total Progress ── */}
+      <motion.div variants={itemVariants} className="glass-panel p-7 flex flex-col items-center text-center space-y-4 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-secondary/10 pointer-events-none" />
-        <div className="absolute -top-8 -right-8 w-40 h-40 bg-primary/15 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-8 -left-8 w-40 h-40 bg-secondary/15 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -top-10 -right-10 w-44 h-44 bg-primary/15 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-10 -left-10 w-44 h-44 bg-secondary/15 rounded-full blur-3xl pointer-events-none" />
+
         <div className="relative z-10">
-          <h2 className="text-2xl font-display font-extrabold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+          <h2
+            className="text-3xl font-display font-black"
+            style={{
+              background: 'linear-gradient(90deg, hsl(var(--primary)), hsl(var(--secondary)))',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            }}
+          >
             NEET 2027
           </h2>
-          <p className="text-sm text-muted-foreground mt-1 font-medium">Ultimate Tracker</p>
-          <p className="text-xs text-muted-foreground/70 mt-0.5">Track Your Entire NEET Preparation in One Place</p>
+          <p className="text-xs text-muted-foreground mt-1 font-semibold tracking-wide">Ultimate Tracker</p>
+          <p className="text-[11px] text-muted-foreground/60 mt-0.5">Track Your Entire NEET Preparation in One Place</p>
         </div>
+
         <div className="relative z-10">
-          <ProgressCircle progress={overallProgress} size={165} strokeWidth={14} />
+          <ProgressCircle progress={overallProgress} size={162} strokeWidth={14} />
         </div>
-        <div className="relative z-10 flex gap-6 w-full justify-center">
+
+        {/* Mini per-subject row */}
+        <div className="relative z-10 flex gap-5 w-full justify-center pt-1">
           {subjects.map(sub => (
-            <div key={sub} className="flex flex-col items-center gap-1">
-              <div className="text-sm font-display font-bold text-foreground">
+            <div key={sub} className="flex flex-col items-center gap-0.5">
+              <span className="text-sm font-display font-extrabold text-foreground">
                 {Math.round(getSubjectProgress(sub))}%
-              </div>
-              <div className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
+              </span>
+              <span className="text-[9px] text-muted-foreground uppercase tracking-widest font-bold">
                 {SYLLABUS[sub].name.slice(0, 4)}
-              </div>
+              </span>
             </div>
           ))}
         </div>
       </motion.div>
 
-      {/* Daily Motivation */}
+      {/* ── NEET 2027 Countdown ── */}
+      <motion.div variants={itemVariants}>
+        <Countdown />
+      </motion.div>
+
+      {/* ── Daily Motivation ── */}
       <motion.div variants={itemVariants} className="glass-panel relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-violet-600/15 via-purple-500/10 to-cyan-500/15 pointer-events-none" />
-        <div className="absolute top-0 right-0 w-32 h-32 bg-primary/20 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-br from-violet-600/15 via-purple-500/8 to-cyan-500/15 pointer-events-none" />
+        <div className="absolute -top-8 -right-8 w-32 h-32 bg-primary/20 rounded-full blur-3xl pointer-events-none" />
         <div className="p-5 relative z-10">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="p-2 bg-gradient-to-br from-violet-500 to-cyan-500 rounded-xl shadow-lg shadow-violet-500/30">
+          <div className="flex items-center gap-2.5 mb-3">
+            <div
+              className="p-2 rounded-xl shadow-lg"
+              style={{ background: 'linear-gradient(135deg, #7c3aed, #06b6d4)', boxShadow: '0 4px 14px rgba(124,58,237,0.4)' }}
+            >
               <Stethoscope className="w-4 h-4 text-white" />
             </div>
             <div>
-              <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Daily Motivation</p>
-              <p className="text-[11px] text-primary font-semibold">Doctor's Wisdom of the Day</p>
+              <p className="text-[9px] uppercase tracking-widest text-muted-foreground font-bold">Daily Motivation</p>
+              <p className="text-[11px] text-primary font-bold">Doctor's Wisdom of the Day</p>
             </div>
           </div>
           <div className="relative pl-4">
-            <Quote className="absolute left-0 top-0 w-3 h-3 text-primary/60" />
+            <Quote className="absolute left-0 top-0.5 w-3 h-3 text-primary/50" />
             <p className="text-sm font-medium leading-relaxed text-foreground/90 italic">
               {dailyQuote.quote}
             </p>
           </div>
-          <p className="text-right text-xs text-muted-foreground font-semibold mt-3">
-            — {dailyQuote.author}
-          </p>
+          <p className="text-right text-xs text-muted-foreground font-semibold mt-2.5">— {dailyQuote.author}</p>
         </div>
       </motion.div>
 
-      {/* Study Streak */}
+      {/* ── Study Streak ── */}
       <motion.div variants={itemVariants} className="glass-panel p-5 flex items-center justify-between overflow-hidden relative">
         <div className="absolute right-0 top-0 w-36 h-36 bg-orange-500/10 rounded-full blur-3xl -mr-12 -mt-12 pointer-events-none" />
         <div className="flex items-center gap-4 relative z-10">
           <motion.div
-            animate={{ scale: [1, 1.15, 1] }}
+            animate={{ scale: [1, 1.18, 1] }}
             transition={{ repeat: Infinity, duration: 1.8, ease: "easeInOut" }}
-            className="p-3 bg-gradient-to-br from-orange-400 to-red-500 rounded-2xl shadow-lg shadow-orange-500/30"
+            className="p-3 rounded-2xl shadow-lg"
+            style={{ background: 'linear-gradient(135deg, #fb923c, #ef4444)', boxShadow: '0 6px 20px rgba(251,146,60,0.4)' }}
           >
             <Flame className="w-6 h-6 text-white" />
           </motion.div>
@@ -167,7 +179,13 @@ export const Home: React.FC = () => {
             key={streak.currentStreak}
             initial={{ scale: 1.4, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="text-4xl font-display font-extrabold bg-gradient-to-r from-orange-400 to-red-500 bg-clip-text text-transparent"
+            className="text-4xl font-display font-extrabold"
+            style={{
+              background: 'linear-gradient(135deg, #fb923c, #ef4444)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            }}
           >
             {streak.currentStreak}
           </motion.span>
@@ -175,9 +193,11 @@ export const Home: React.FC = () => {
         </div>
       </motion.div>
 
-      {/* Subject Cards */}
+      {/* ── Subject Cards ── */}
       <motion.div variants={itemVariants}>
-        <h3 className="text-sm font-display font-bold uppercase tracking-widest text-muted-foreground mb-3 px-1">Subjects</h3>
+        <h3 className="text-[11px] font-display font-black uppercase tracking-widest text-muted-foreground mb-3 px-1">
+          Subjects
+        </h3>
         <div className="grid grid-cols-2 gap-3">
           {subjects.map((sub) => {
             const s = SYLLABUS[sub];
@@ -190,30 +210,38 @@ export const Home: React.FC = () => {
               <Link key={sub} href={`/subject/${sub}`} className="block h-full outline-none">
                 <motion.div
                   whileHover={{ y: -5, scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
+                  whileTap={{ scale: 0.96 }}
                   className="glass-panel-interactive p-5 flex flex-col h-full cursor-pointer relative overflow-hidden"
                 >
                   <div className={`absolute inset-0 bg-gradient-to-br ${subjectGlows[sub]} pointer-events-none`} />
                   <div className={`absolute -right-6 -top-6 w-24 h-24 bg-gradient-to-br ${s.color} opacity-15 rounded-full blur-2xl pointer-events-none`} />
 
-                  <div className={`w-11 h-11 rounded-2xl bg-gradient-to-br ${s.color} flex items-center justify-center mb-4 shadow-lg relative z-10`}>
+                  <div className={`w-11 h-11 rounded-2xl bg-gradient-to-br ${s.color} flex items-center justify-center mb-4 shadow-lg relative z-10`}
+                    style={{ boxShadow: `0 6px 20px rgba(0,0,0,0.25)` }}>
                     {subjectIcons[sub]}
                   </div>
 
                   <div className="flex-1 relative z-10">
                     <h3 className="font-display font-extrabold text-base mb-1 tracking-tight">{s.name}</h3>
-                    <p className="text-xs text-muted-foreground mb-0.5 font-medium">
-                      {completed}/{total} Completed
+                    <p className="text-xs text-muted-foreground mb-0.5 font-semibold">
+                      {completed}/{total} Done
                     </p>
-                    <p className="text-[10px] text-muted-foreground/60 font-medium">
+                    <p className="text-[10px] text-muted-foreground/55 font-medium">
                       {remaining} remaining
                     </p>
                   </div>
 
-                  <div className="space-y-2 mt-4 relative z-10">
-                    <div className="flex justify-between text-xs font-bold">
+                  <div className="space-y-1.5 mt-4 relative z-10">
+                    <div className="flex justify-between text-[11px] font-bold">
                       <span className="text-muted-foreground">Progress</span>
-                      <span className={`bg-gradient-to-r ${s.color} bg-clip-text text-transparent`}>{Math.round(prog)}%</span>
+                      <span
+                        style={{
+                          background: `linear-gradient(90deg, var(--tw-gradient-from), var(--tw-gradient-to))`,
+                        }}
+                        className={`bg-gradient-to-r ${s.color} bg-clip-text text-transparent`}
+                      >
+                        {Math.round(prog)}%
+                      </span>
                     </div>
                     <ProgressBar progress={prog} colorClass={`bg-gradient-to-r ${s.color}`} height={7} />
                   </div>
@@ -224,7 +252,7 @@ export const Home: React.FC = () => {
         </div>
       </motion.div>
 
-      {/* Today's Tasks Preview */}
+      {/* ── Today's Tasks Preview ── */}
       <motion.div variants={itemVariants} className="glass-panel p-5">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
@@ -233,26 +261,32 @@ export const Home: React.FC = () => {
             </div>
             <h3 className="font-display font-bold text-base">Today's Tasks</h3>
           </div>
-          <Link href="/todos" className="text-xs font-bold text-primary hover:text-primary/80 flex items-center gap-0.5 transition-colors bg-primary/10 px-3 py-1.5 rounded-full">
+          <Link
+            href="/todos"
+            className="text-[11px] font-bold text-primary hover:text-primary/80 flex items-center gap-0.5 transition-colors bg-primary/10 px-3 py-1.5 rounded-full"
+          >
             View All <ChevronRight className="w-3 h-3" />
           </Link>
         </div>
 
         {todos.length === 0 ? (
-          <div className="text-center py-8 bg-black/5 dark:bg-white/5 rounded-2xl border border-white/5">
+          <div className="text-center py-7 rounded-2xl border border-white/5" style={{ background: 'rgba(255,255,255,0.03)' }}>
             <p className="text-sm text-muted-foreground">No tasks yet.</p>
-            <Link href="/todos" className="text-primary font-semibold text-sm mt-1 inline-block hover:underline">+ Add a task</Link>
+            <Link href="/todos" className="text-primary font-bold text-sm mt-1 inline-block hover:underline">
+              + Add a task
+            </Link>
           </div>
         ) : (
-          <div className="space-y-2.5">
+          <div className="space-y-2">
             {todos.slice(0, 3).map((task) => (
               <Link key={task.id} href={`/todos/${task.id}`} className="block outline-none">
                 <motion.div
-                  whileHover={{ x: 4 }}
+                  whileHover={{ x: 5 }}
                   className={cn(
-                    "flex items-center gap-3 p-3.5 rounded-2xl bg-black/5 dark:bg-white/5 border border-white/5 cursor-pointer transition-colors hover:bg-black/10 dark:hover:bg-white/10",
-                    task.completed && "opacity-55"
+                    "flex items-center gap-3 p-3.5 rounded-2xl border border-white/5 cursor-pointer transition-colors",
+                    task.completed ? "opacity-50" : "hover:bg-white/5",
                   )}
+                  style={{ background: 'rgba(255,255,255,0.04)' }}
                 >
                   <div className={cn(
                     "flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all",
@@ -263,7 +297,7 @@ export const Home: React.FC = () => {
                   <span className={cn("text-sm font-medium truncate flex-1", task.completed && "line-through text-muted-foreground")}>
                     {task.title}
                   </span>
-                  <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50 flex-shrink-0" />
+                  <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/40 flex-shrink-0" />
                 </motion.div>
               </Link>
             ))}
