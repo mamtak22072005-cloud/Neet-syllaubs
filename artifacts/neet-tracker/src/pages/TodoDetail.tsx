@@ -1,157 +1,148 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useParams, useLocation } from 'wouter';
+import React, { useState } from 'react';
+import { useRoute, Link, useLocation } from 'wouter';
 import { useStore } from '@/hooks/use-store';
-import { ChevronLeft, Trash2, CheckCircle2, Circle, Calendar, Save, Edit3 } from 'lucide-react';
+import { ChevronLeft, Trash2, Edit2, Save, X, Calendar, CheckCircle2, Circle } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
 
 export const TodoDetail: React.FC = () => {
-  const params = useParams();
+  const [, params] = useRoute('/todos/:id');
   const [, setLocation] = useLocation();
-  const { todos, toggleTodo, deleteTodo, updateTodo } = useStore();
+  const taskId = params?.id;
+  const { todos, updateTodo, deleteTodo, toggleTodo } = useStore();
   
-  const task = todos.find(t => t.id === params.id);
+  const task = todos.find(t => t.id === taskId);
   
   const [isEditing, setIsEditing] = useState(false);
-  const [editTitle, setEditTitle] = useState('');
-  const [editDesc, setEditDesc] = useState('');
-
-  useEffect(() => {
-    if (task) {
-      setEditTitle(task.title);
-      setEditDesc(task.description || '');
-    }
-  }, [task]);
+  const [editTitle, setEditTitle] = useState(task?.title || '');
+  const [editDesc, setEditDesc] = useState(task?.description || '');
 
   if (!task) {
     return (
       <div className="text-center py-20">
-        <h2 className="text-xl mb-4">Task not found</h2>
-        <Link href="/todos" className="text-primary hover:underline">Return to To-Do List</Link>
+        <h2 className="text-xl font-bold">Task not found</h2>
+        <Link href="/todos" className="text-primary mt-4 inline-block hover:underline">Go back</Link>
       </div>
     );
   }
 
-  const handleDelete = () => {
-    deleteTodo(task.id);
-    setLocation('/todos');
-  };
-
   const handleSave = () => {
     if (!editTitle.trim()) return;
-    updateTodo(task.id, { title: editTitle.trim(), description: editDesc.trim() });
+    updateTodo(task.id, { title: editTitle, description: editDesc });
     setIsEditing(false);
   };
 
+  const handleDelete = () => {
+    if (confirm('Delete this task?')) {
+      deleteTodo(task.id);
+      setLocation('/todos');
+    }
+  };
+
   return (
-    <div className="space-y-6">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      className="space-y-6"
+    >
       {/* Header */}
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Link href="/todos">
-            <div className="p-2 rounded-full hover:bg-white/10 glass-panel cursor-pointer">
-              <ChevronLeft className="w-6 h-6" />
-            </div>
+          <Link href="/todos" className="p-3 glass-panel-interactive rounded-xl hover:bg-white/10 text-foreground">
+            <ChevronLeft className="w-5 h-5" />
           </Link>
-          <span className="text-xs font-semibold text-primary uppercase tracking-wider">Task Details</span>
+          <span className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Task Details</span>
         </div>
         
-        <div className="flex gap-2">
-          {!isEditing ? (
+        {!isEditing && (
+          <div className="flex gap-2">
             <button 
               onClick={() => setIsEditing(true)}
-              className="p-2 rounded-full glass-panel hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors"
+              className="p-3 glass-panel-interactive rounded-xl hover:text-primary transition-colors"
             >
-              <Edit3 className="w-5 h-5" />
+              <Edit2 className="w-4 h-4" />
             </button>
-          ) : (
             <button 
-              onClick={handleSave}
-              className="p-2 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:scale-105 transition-transform"
+              onClick={handleDelete}
+              className="p-3 glass-panel-interactive rounded-xl text-destructive hover:bg-destructive/10 transition-colors border-destructive/20"
             >
-              <Save className="w-5 h-5" />
+              <Trash2 className="w-4 h-4" />
             </button>
-          )}
-          <button 
-            onClick={handleDelete}
-            className="p-2 rounded-full glass-panel hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors border-destructive/20"
-          >
-            <Trash2 className="w-5 h-5" />
-          </button>
-        </div>
+          </div>
+        )}
       </div>
 
-      {/* Main Content */}
-      <div className="glass-panel rounded-3xl p-6 sm:p-8 space-y-6">
-        
-        <div className="flex items-center gap-3 text-sm text-muted-foreground border-b border-white/10 pb-4">
-          <Calendar className="w-4 h-4" />
-          <span>Created on {format(new Date(task.createdAt), "MMM d, yyyy 'at' h:mm a")}</span>
-        </div>
-
+      <div className="glass-panel p-6 space-y-6">
         {isEditing ? (
           <div className="space-y-4">
-            <input
-              type="text"
-              value={editTitle}
-              onChange={(e) => setEditTitle(e.target.value)}
-              className="w-full bg-transparent border-b border-primary/50 pb-2 text-2xl font-display font-bold focus:outline-none"
-              placeholder="Task title"
-              autoFocus
-            />
-            <textarea
-              value={editDesc}
-              onChange={(e) => setEditDesc(e.target.value)}
-              className="w-full bg-black/5 dark:bg-white/5 border border-white/10 rounded-xl p-4 min-h-[150px] focus:outline-none focus:border-primary/50 resize-y"
-              placeholder="Add description..."
-            />
+            <div>
+              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Title</label>
+              <input
+                type="text"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                className="w-full bg-black/5 dark:bg-white/5 border border-border/50 rounded-xl p-3 text-foreground font-semibold focus:outline-none focus:border-primary"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Description</label>
+              <textarea
+                value={editDesc}
+                onChange={(e) => setEditDesc(e.target.value)}
+                className="w-full bg-black/5 dark:bg-white/5 border border-border/50 rounded-xl p-3 text-foreground min-h-[120px] focus:outline-none focus:border-primary resize-none"
+              />
+            </div>
+            <div className="flex gap-3 pt-4">
+              <button 
+                onClick={handleSave}
+                className="flex-1 py-3 bg-primary text-primary-foreground rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-primary/30 hover:opacity-90"
+              >
+                <Save className="w-4 h-4" /> Save Changes
+              </button>
+              <button 
+                onClick={() => {
+                  setIsEditing(false);
+                  setEditTitle(task.title);
+                  setEditDesc(task.description);
+                }}
+                className="flex-1 py-3 bg-black/10 dark:bg-white/10 text-foreground rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-black/20 dark:hover:bg-white/20"
+              >
+                <X className="w-4 h-4" /> Cancel
+              </button>
+            </div>
           </div>
         ) : (
-          <div className="space-y-6">
+          <>
             <div className="flex items-start gap-4">
               <button 
                 onClick={() => toggleTodo(task.id)}
-                className="mt-1 flex-shrink-0 transition-transform hover:scale-110 active:scale-95"
+                className={`mt-1 flex-shrink-0 transition-transform hover:scale-110 ${task.completed ? 'text-emerald-500' : 'text-muted-foreground hover:text-primary'}`}
               >
-                {task.completed ? (
-                  <CheckCircle2 className="w-8 h-8 text-emerald-500 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-                ) : (
-                  <Circle className="w-8 h-8 text-muted-foreground" />
-                )}
+                {task.completed ? <CheckCircle2 className="w-8 h-8" /> : <Circle className="w-8 h-8" />}
               </button>
               <div>
-                <h1 className={cn(
-                  "text-2xl font-display font-bold leading-tight break-words",
-                  task.completed && "line-through text-muted-foreground"
-                )}>
+                <h1 className={`text-2xl font-display font-bold leading-tight ${task.completed ? 'text-muted-foreground line-through' : 'text-foreground text-glow'}`}>
                   {task.title}
                 </h1>
                 
-                <div className="mt-4">
-                  {task.completed ? (
-                    <span className="inline-flex items-center px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-500 text-xs font-bold border border-emerald-500/20">
-                      COMPLETED
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center px-3 py-1 rounded-full bg-orange-500/10 text-orange-500 text-xs font-bold border border-orange-500/20">
-                      PENDING
-                    </span>
-                  )}
+                <div className="flex items-center gap-2 mt-4 text-sm text-muted-foreground font-medium">
+                  <Calendar className="w-4 h-4" />
+                  Created {format(new Date(task.createdAt), 'MMM d, yyyy')}
                 </div>
               </div>
             </div>
 
             {task.description && (
-              <div className="mt-8 pt-6 border-t border-white/10">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Notes</h3>
-                <p className="whitespace-pre-wrap text-foreground/90 leading-relaxed bg-black/5 dark:bg-white/5 p-4 rounded-xl border border-white/5">
-                  {task.description}
-                </p>
+              <div className="pt-6 border-t border-border/50">
+                <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Description</h3>
+                <p className="text-foreground/90 whitespace-pre-wrap leading-relaxed">{task.description}</p>
               </div>
             )}
-          </div>
+          </>
         )}
       </div>
-    </div>
+
+    </motion.div>
   );
 };

@@ -1,19 +1,10 @@
 packages:
-  "framer-motion": "For page transitions, smooth progress bars, and floating card animations"
+  "framer-motion": "Required for ultra-smooth floating animations, page transitions, and spring physics"
+  "lucide-react": "Required for modern sleek icons"
   "clsx": "Utility for constructing className strings conditionally"
-  "tailwind-merge": "Utility to merge tailwind classes efficiently"
-  "date-fns": "For handling streak dates and todo creation dates"
-  "lucide-react": "For beautiful vector icons across the app"
-
-images:
-  - path: "artifacts/neet-tracker/public/images/mesh-bg-dark.png"
-    description: "Deep dark space and nebula abstract gradient mesh background in navy, deep violet, and subtle cyan glows, perfect for a modern dark mode glassmorphism app background"
-    aspect_ratio: "9:16"
-  - path: "artifacts/neet-tracker/public/images/mesh-bg-light.png"
-    description: "Soft ethereal abstract gradient mesh background in pale blue, soft lavender, and white, perfect for a modern light mode glassmorphism app background"
-    aspect_ratio: "9:16"
+  "tailwind-merge": "Utility for merging tailwind classes safely"
+  "date-fns": "For date formatting and streak date math"
 
 notes:
-  - Using a React Context + LocalStorage custom provider for all state as requested, avoiding external API calls.
-  - App is constrained to a mobile-like container (max-w-md) on desktop to provide a native app feel as specified in the design requirements.
-  - Wouter used for routing for native back-button support, while keeping the SPA feel.
+  - This app is fully contained within the browser using localStorage.
+  - No backend API is required.
