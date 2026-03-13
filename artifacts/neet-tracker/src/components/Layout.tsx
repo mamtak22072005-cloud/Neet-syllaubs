@@ -27,7 +27,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         <header className="sticky top-0 z-50 px-6 py-5 flex justify-between items-center bg-background/40 backdrop-blur-xl border-b border-white/5">
           <div>
             <h1 className="text-xl font-display font-extrabold text-gradient text-glow">
-              NEET 2025
+              NEET 2027
             </h1>
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Ultimate Tracker</p>
           </div>

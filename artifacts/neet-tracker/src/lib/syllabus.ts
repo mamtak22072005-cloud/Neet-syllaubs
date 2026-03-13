@@ -70,9 +70,7 @@ export const SYLLABUS = {
     ],
     class12: [
       "Human Reproduction", "Reproductive Health", "Human Health and Disease", 
-      "Strategies for Enhancement in Food Production", "Microbes in Human Welfare", 
-      "Biotechnology Principles and Processes", "Biotechnology and Its Applications", 
-      "Evolution", "Human Health", "Ecology"
+      "Strategies for Enhancement in Food Production", "Microbes in Human Welfare"
     ]
   }
 } as const;
