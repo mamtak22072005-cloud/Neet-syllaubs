@@ -1,141 +1,127 @@
 import React, { useState } from 'react';
-import { Link, useParams } from 'wouter';
-import { SYLLABUS, SubjectId } from '@/lib/syllabus';
+import { useRoute, Link } from 'wouter';
 import { useStore } from '@/hooks/use-store';
+import { SYLLABUS, SubjectId } from '@/lib/syllabus';
+import { ProgressCircle } from '@/components/ProgressCircle';
 import { ProgressBar } from '@/components/ProgressBar';
-import { ChevronLeft, ChevronDown, ChevronRight, BookOpen } from 'lucide-react';
-import { slugify, cn } from '@/lib/utils';
+import { ChevronLeft, ChevronRight, BookOpen } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export const Subject: React.FC = () => {
-  const params = useParams();
-  const subjectId = params.id as SubjectId;
+  const [, params] = useRoute('/subject/:id');
+  const subjectId = params?.id as SubjectId;
   const { getSubjectProgress, getChapterProgress } = useStore();
-  
-  const [openSection, setOpenSection] = useState<'class11' | 'class12' | null>('class11');
+  const [activeTab, setActiveTab] = useState<'11' | '12'>('11');
 
-  if (!SYLLABUS[subjectId]) {
-    return <div>Subject not found</div>;
-  }
+  if (!subjectId || !SYLLABUS[subjectId]) return <div>Subject not found</div>;
 
   const subject = SYLLABUS[subjectId];
-  const overallProgress = getSubjectProgress(subjectId);
+  const progress = getSubjectProgress(subjectId);
+  const chapters = activeTab === '11' ? subject.class11 : subject.class12;
 
-  const toggleSection = (section: 'class11' | 'class12') => {
-    setOpenSection(prev => prev === section ? null : section);
+  const containerVariants = {
+    hidden: { opacity: 0, x: 20 },
+    show: { opacity: 1, x: 0, transition: { staggerChildren: 0.05, type: "spring" } }
   };
 
-  const renderChapterList = (chapters: readonly string[], classLabel: string) => (
-    <div className="space-y-3 mt-4">
-      {chapters.map((chapter) => {
-        const prog = getChapterProgress(subjectId, chapter);
-        const completedTasks = Math.round((prog / 100) * 9);
-        
-        return (
-          <Link key={chapter} href={`/subject/${subjectId}/chapter/${slugify(chapter)}`}>
-            <div className="glass-panel-interactive p-4 rounded-xl flex items-center gap-4 cursor-pointer group">
-              <div className="flex-1 min-w-0">
-                <h4 className="font-medium text-sm sm:text-base truncate group-hover:text-primary transition-colors">
-                  {chapter}
-                </h4>
-                <div className="flex items-center justify-between mt-2">
-                  <span className="text-xs text-muted-foreground">{completedTasks}/9 Tasks</span>
-                  <span className="text-xs font-medium text-primary">{Math.round(prog)}%</span>
-                </div>
-                <ProgressBar progress={prog} height="h-1.5" className="mt-1.5" colorClass={`bg-gradient-to-r ${subject.color}`} />
-              </div>
-              <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0" />
-            </div>
-          </Link>
-        );
-      })}
-    </div>
-  );
+  const itemVariants = {
+    hidden: { opacity: 0, y: 10 },
+    show: { opacity: 1, y: 0 }
+  };
 
   return (
-    <div className="space-y-6">
+    <motion.div 
+      initial={{ opacity: 0, x: 50 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -50 }}
+      className="space-y-6"
+    >
       {/* Header */}
-      <div className="flex items-center gap-4 mb-2">
-        <Link href="/">
-          <div className="p-2 rounded-full hover:bg-white/10 glass-panel cursor-pointer">
-            <ChevronLeft className="w-6 h-6" />
-          </div>
+      <div className="flex items-center gap-4">
+        <Link href="/" className="p-3 glass-panel-interactive rounded-xl hover:bg-white/10 text-foreground">
+          <ChevronLeft className="w-5 h-5" />
         </Link>
-        <h2 className="text-2xl font-display font-bold">{subject.name}</h2>
+        <div className="flex-1">
+          <h1 className="text-2xl font-display font-bold text-glow">{subject.name}</h1>
+          <p className="text-xs text-muted-foreground uppercase tracking-widest font-semibold">Syllabus Overview</p>
+        </div>
       </div>
 
       {/* Progress Card */}
-      <div className="glass-panel rounded-2xl p-6 relative overflow-hidden">
-        <div className={cn("absolute right-0 top-0 w-32 h-32 rounded-full blur-3xl -mr-10 -mt-10 opacity-20", subject.color.split(' ')[0].replace('from-', 'bg-'))} />
-        
-        <div className="flex items-center gap-3 mb-4 relative z-10">
-          <BookOpen className="w-6 h-6 text-primary" />
-          <h3 className="text-lg font-semibold">Subject Progress</h3>
+      <div className={`glass-panel p-6 flex items-center justify-between relative overflow-hidden`}>
+        <div className={`absolute inset-0 bg-gradient-to-r ${subject.color} opacity-10 pointer-events-none`} />
+        <div>
+          <h2 className="font-semibold text-lg">Overall Progress</h2>
+          <p className="text-sm text-muted-foreground mt-1">Stay focused!</p>
         </div>
-        
-        <div className="relative z-10">
-          <div className="flex justify-between items-end mb-2">
-            <span className="text-3xl font-display font-bold">{Math.round(overallProgress)}%</span>
-            <span className="text-sm text-muted-foreground mb-1">Completed</span>
-          </div>
-          <ProgressBar progress={overallProgress} height="h-3" colorClass={`bg-gradient-to-r ${subject.color}`} />
-        </div>
+        <ProgressCircle progress={progress} size={80} strokeWidth={8} colorClass={`text-${subjectId}-500`} gradientId={`${subjectId}-grad`} />
       </div>
 
-      {/* Sections */}
-      <div className="space-y-4">
-        {/* Class 11 */}
-        <div className="glass-panel rounded-2xl overflow-hidden">
-          <button 
-            className="w-full p-5 flex items-center justify-between hover:bg-white/5 transition-colors"
-            onClick={() => toggleSection('class11')}
-          >
-            <h3 className="font-display font-semibold text-lg">Class 11 Syllabus</h3>
-            <ChevronDown className={cn("w-5 h-5 transition-transform duration-300", openSection === 'class11' ? "rotate-180" : "")} />
-          </button>
-          
-          <AnimatePresence>
-            {openSection === 'class11' && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden"
-              >
-                <div className="p-4 pt-0 border-t border-white/5">
-                  {renderChapterList(subject.class11, "Class 11")}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        {/* Class 12 */}
-        <div className="glass-panel rounded-2xl overflow-hidden">
-          <button 
-            className="w-full p-5 flex items-center justify-between hover:bg-white/5 transition-colors"
-            onClick={() => toggleSection('class12')}
-          >
-            <h3 className="font-display font-semibold text-lg">Class 12 Syllabus</h3>
-            <ChevronDown className={cn("w-5 h-5 transition-transform duration-300", openSection === 'class12' ? "rotate-180" : "")} />
-          </button>
-          
-          <AnimatePresence>
-            {openSection === 'class12' && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden"
-              >
-                <div className="p-4 pt-0 border-t border-white/5">
-                  {renderChapterList(subject.class12, "Class 12")}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+      {/* Class Tabs */}
+      <div className="glass-panel p-1 flex rounded-xl">
+        <button 
+          onClick={() => setActiveTab('11')}
+          className={`flex-1 py-3 text-sm font-semibold rounded-lg transition-all ${activeTab === '11' ? 'bg-white/15 shadow-md text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+        >
+          Class 11
+        </button>
+        <button 
+          onClick={() => setActiveTab('12')}
+          className={`flex-1 py-3 text-sm font-semibold rounded-lg transition-all ${activeTab === '12' ? 'bg-white/15 shadow-md text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+        >
+          Class 12
+        </button>
       </div>
-    </div>
+
+      {/* Chapter List */}
+      <AnimatePresence mode="wait">
+        <motion.div 
+          key={activeTab}
+          variants={containerVariants}
+          initial="hidden"
+          animate="show"
+          exit={{ opacity: 0, scale: 0.95 }}
+          className="space-y-3"
+        >
+          {chapters.map((chapter, index) => {
+            const chapProgress = getChapterProgress(subjectId, chapter);
+            const isCompleted = chapProgress === 100;
+            
+            return (
+              <Link key={chapter} href={`/subject/${subjectId}/chapter/${encodeURIComponent(chapter)}`} className="block outline-none">
+                <motion.div 
+                  variants={itemVariants}
+                  whileHover={{ scale: 1.02, x: 4 }}
+                  whileTap={{ scale: 0.98 }}
+                  className={`glass-panel-interactive p-4 flex flex-col gap-3 cursor-pointer ${isCompleted ? 'border-primary/50' : ''}`}
+                >
+                  <div className="flex justify-between items-start gap-4">
+                    <div className="flex gap-3">
+                      <div className="mt-1 w-6 h-6 rounded bg-black/10 dark:bg-white/10 flex items-center justify-center flex-shrink-0">
+                        <span className="text-[10px] font-bold text-muted-foreground">{index + 1}</span>
+                      </div>
+                      <h3 className={`font-semibold leading-tight ${isCompleted ? 'text-primary text-glow' : 'text-foreground'}`}>
+                        {chapter}
+                      </h3>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                  </div>
+                  
+                  <div className="pl-9 flex items-center gap-3">
+                    <div className="flex-1">
+                      <ProgressBar progress={chapProgress} height={6} colorClass={isCompleted ? "bg-primary" : `bg-gradient-to-r ${subject.color}`} />
+                    </div>
+                    <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-black/10 dark:bg-white/10 text-muted-foreground whitespace-nowrap">
+                      {Math.round(chapProgress)}%
+                    </span>
+                  </div>
+                </motion.div>
+              </Link>
+            );
+          })}
+        </motion.div>
+      </AnimatePresence>
+      
+    </motion.div>
   );
 };

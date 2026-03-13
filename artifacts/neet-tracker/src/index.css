@@ -1,8 +1,8 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
 @theme inline {
-  --font-sans: 'DM Sans', sans-serif;
+  --font-sans: 'Inter', sans-serif;
   --font-display: 'Outfit', sans-serif;
 
   --color-background: hsl(var(--background));
@@ -20,55 +20,57 @@
   --color-accent-foreground: hsl(var(--accent-foreground));
   --color-destructive: hsl(var(--destructive));
   --color-destructive-foreground: hsl(var(--destructive-foreground));
-  --color-glass-border: var(--glass-border);
-  --color-glass-bg: var(--glass-bg);
 }
 
 :root {
-  --background: 226 65% 98%;
+  /* LIGHT MODE */
+  --background: 220 30% 96%;
   --foreground: 230 40% 15%;
   --card: 0 0% 100%;
   --card-foreground: 230 40% 15%;
   --border: 220 20% 90%;
-  --primary: 250 85% 60%;
+  --primary: 260 85% 60%;
   --primary-foreground: 0 0% 100%;
   --secondary: 190 90% 40%;
   --secondary-foreground: 0 0% 100%;
   --muted: 220 20% 90%;
   --muted-foreground: 230 20% 45%;
-  --accent: 250 85% 60%;
+  --accent: 290 85% 60%;
   --accent-foreground: 0 0% 100%;
   --destructive: 0 85% 60%;
   --destructive-foreground: 0 0% 100%;
   
   --glass-border: rgba(255, 255, 255, 0.4);
   --glass-bg: rgba(255, 255, 255, 0.65);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
 }
 
 .dark {
-  --background: 240 50% 8%;
+  /* DARK MODE */
+  --background: 240 60% 4%;
   --foreground: 210 40% 98%;
-  --card: 240 40% 12%;
+  --card: 240 40% 10%;
   --card-foreground: 210 40% 98%;
   --border: 240 30% 20%;
-  --primary: 260 85% 65%;
+  --primary: 265 89% 65%;
   --primary-foreground: 0 0% 100%;
   --secondary: 190 90% 45%;
   --secondary-foreground: 0 0% 100%;
-  --muted: 240 30% 20%;
+  --muted: 240 30% 15%;
   --muted-foreground: 220 20% 65%;
-  --accent: 260 85% 65%;
+  --accent: 290 85% 65%;
   --accent-foreground: 0 0% 100%;
   --destructive: 0 85% 65%;
   --destructive-foreground: 0 0% 100%;
 
-  --glass-border: rgba(255, 255, 255, 0.12);
-  --glass-bg: rgba(255, 255, 255, 0.05);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-bg: rgba(255, 255, 255, 0.03);
+  --glass-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
 }
 
 @layer base {
   body {
-    @apply bg-background text-foreground antialiased font-sans transition-colors duration-500;
+    @apply text-foreground antialiased font-sans overflow-x-hidden min-h-screen bg-background selection:bg-primary/30;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -77,45 +79,78 @@
   }
 }
 
-/* Glassmorphism Utilities */
+/* 
+  Custom CSS for animations and glassmorphism.
+  Kept outside @layer utilities to ensure maximum compatibility in Tailwind v4
+*/
+
+.animated-gradient-bg {
+  background-size: 200% 200%;
+  animation: bg-shift 12s ease-in-out infinite;
+}
+
+.dark .animated-gradient-bg {
+  background: linear-gradient(135deg, #050510 0%, #150935 40%, #0a1628 70%, #050510 100%);
+  background-size: 200% 200%;
+}
+
+.animated-gradient-bg:not(.dark *) {
+  background: linear-gradient(135deg, #e8eaf6 0%, #f3e5f5 40%, #e3f2fd 100%);
+  background-size: 200% 200%;
+}
+
+@keyframes bg-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
 .glass-panel {
   position: relative;
   overflow: hidden;
-  backdrop-filter: blur(15px);
-  -webkit-backdrop-filter: blur(15px);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--glass-shadow);
+  border-radius: 22px;
 }
 
 .glass-panel-interactive {
   position: relative;
   overflow: hidden;
-  backdrop-filter: blur(15px);
-  -webkit-backdrop-filter: blur(15px);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-  transition: all 0.3s ease;
+  box-shadow: var(--glass-shadow);
+  border-radius: 22px;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .glass-panel-interactive:hover {
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
-  transform: translateY(-2px);
-  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  background: color-mix(in srgb, var(--glass-bg) 80%, white 20%);
 }
 
 .dark .glass-panel-interactive:hover {
-  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  border-color: rgba(255, 255, 255, 0.15);
 }
 
-@layer utilities {
-  .text-glow {
-    text-shadow: 0 0 10px currentColor;
-  }
+.text-gradient {
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-image: linear-gradient(to right, hsl(var(--primary)), hsl(var(--secondary)));
 }
 
-/* Custom Scrollbar for inner elements */
+.text-glow {
+  text-shadow: 0 0 20px color-mix(in srgb, currentColor 40%, transparent);
+}
+
+/* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
 }
@@ -123,8 +158,9 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  @apply bg-muted-foreground/30 rounded-full;
+  background-color: hsl(var(--muted-foreground) / 0.3);
+  border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-muted-foreground/50;
+  background-color: hsl(var(--muted-foreground) / 0.5);
 }

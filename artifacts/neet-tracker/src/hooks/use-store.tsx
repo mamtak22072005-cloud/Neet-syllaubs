@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { SubjectId, TaskId, SYLLABUS, TASKS } from '@/lib/syllabus';
-import { isToday, isYesterday, format } from 'date-fns';
+import { isToday, isYesterday } from 'date-fns';
 import { generateId } from '@/lib/utils';
 
 export interface Todo {
@@ -54,7 +54,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [todos, setTodos] = useState<Todo[]>([]);
   const [streak, setStreak] = useState<Streak>({ currentStreak: 0, lastActiveDate: null });
 
-  // Initialize from LocalStorage
   useEffect(() => {
     setIsClient(true);
     
@@ -65,21 +64,18 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     document.documentElement.classList.toggle('dark', initialTheme === 'dark');
 
     // Progress
-    const savedProgress = safeParse(localStorage.getItem('neet_progress'), {});
-    setProgress(savedProgress);
+    setProgress(safeParse(localStorage.getItem('neet_progress'), {}));
 
     // Todos
-    const savedTodos = safeParse(localStorage.getItem('neet_todos'), []);
-    setTodos(savedTodos);
+    setTodos(safeParse(localStorage.getItem('neet_todos'), []));
 
     // Streak
     const savedStreak = safeParse(localStorage.getItem('neet_streak'), { currentStreak: 0, lastActiveDate: null });
     
-    // Recalculate streak based on current date
     if (savedStreak.lastActiveDate) {
       const lastDate = new Date(savedStreak.lastActiveDate);
       if (!isToday(lastDate) && !isYesterday(lastDate)) {
-        savedStreak.currentStreak = 0; // Streak broken
+        savedStreak.currentStreak = 0; 
       }
     }
     setStreak(savedStreak);
@@ -107,7 +103,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
   }, []);
 
-  // Theme Action
   const toggleTheme = () => {
     setTheme(prev => {
       const next = prev === 'dark' ? 'light' : 'dark';
@@ -117,7 +112,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
   };
 
-  // Progress Actions
   const toggleTask = (subject: SubjectId, chapter: string, task: TaskId) => {
     setProgress(prev => {
       const subProg = prev[subject] || {};
@@ -140,7 +134,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     updateStreak();
   };
 
-  // Todo Actions
   const addTodo = (title: string, description: string = '') => {
     const newTodo: Todo = {
       id: generateId(),
@@ -183,7 +176,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     updateStreak();
   };
 
-  // Derived State Helpers
   const getChapterProgress = useCallback((subject: SubjectId, chapter: string) => {
     const chapProg = progress[subject]?.[chapter] || {};
     const completed = TASKS.filter(t => chapProg[t]).length;
@@ -218,7 +210,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return SYLLABUS[subject].class11.length + SYLLABUS[subject].class12.length;
   }, []);
 
-  if (!isClient) return null; // Avoid hydration mismatch
+  if (!isClient) return null; 
 
   return (
     <StoreContext.Provider value={{
