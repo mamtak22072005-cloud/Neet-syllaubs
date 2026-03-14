@@ -62,6 +62,10 @@ interface StoreContextType {
   removeGroupMember: (id: string) => void;
   generateShareCode: () => string;
   syncMyProgress: () => void;
+  testDate: string | null;
+  setTestDate: (date: string | null) => void;
+  studyTimeToday: number;
+  addStudyTime: (seconds: number) => void;
 }
 
 const StoreContext = createContext<StoreContextType | null>(null);
@@ -79,6 +83,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [streak, setStreak] = useState<Streak>({ currentStreak: 0, lastActiveDate: null });
   const [profile, setProfile] = useState<Profile>({ name: '', avatar: null });
   const [studyGroup, setStudyGroup] = useState<StudyGroup | null>(null);
+  const [testDate, setTestDateState] = useState<string | null>(null);
+  const [studyTimeToday, setStudyTimeToday] = useState<number>(0);
 
   useEffect(() => {
     setIsClient(true);
@@ -97,6 +103,17 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setProfile(safeParse(localStorage.getItem('neet_profile'), { name: '', avatar: null }));
     const savedGroup = safeParse(localStorage.getItem('neet_study_group'), null);
     if (savedGroup) setStudyGroup(savedGroup);
+    setTestDateState(localStorage.getItem('neet_test_date') || null);
+
+    // Study time today
+    const todayKey = new Date().toDateString();
+    const savedStudyRaw = localStorage.getItem('neet_study_time');
+    const savedStudy = safeParse(savedStudyRaw, { date: '', seconds: 0 });
+    if (savedStudy.date === todayKey) {
+      setStudyTimeToday(savedStudy.seconds || 0);
+    } else {
+      setStudyTimeToday(0);
+    }
   }, []);
 
   const updateStreak = useCallback(() => {
@@ -211,6 +228,25 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     localStorage.setItem('neet_profile', JSON.stringify(updated));
   }, []);
 
+  const setTestDate = useCallback((date: string | null) => {
+    setTestDateState(date);
+    if (date) {
+      localStorage.setItem('neet_test_date', date);
+    } else {
+      localStorage.removeItem('neet_test_date');
+    }
+  }, []);
+
+  const addStudyTime = useCallback((seconds: number) => {
+    setStudyTimeToday(prev => {
+      const next = prev + seconds;
+      const todayKey = new Date().toDateString();
+      localStorage.setItem('neet_study_time', JSON.stringify({ date: todayKey, seconds: next }));
+      return next;
+    });
+    updateStreak();
+  }, [updateStreak]);
+
   const getMyProgressValue = useCallback(() => {
     const subjects: SubjectId[] = ['physics', 'chemistry', 'botany', 'zoology'];
     let total = 0;
@@ -321,6 +357,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       getCompletedChapters, getTotalChapters,
       profile, updateProfile,
       studyGroup, joinGroup, leaveGroup, importGroupMember, removeGroupMember, generateShareCode, syncMyProgress,
+      testDate, setTestDate,
+      studyTimeToday, addStudyTime,
     }}>
       {children}
     </StoreContext.Provider>

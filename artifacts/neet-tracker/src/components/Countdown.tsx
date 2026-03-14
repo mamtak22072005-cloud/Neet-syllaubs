@@ -1,15 +1,18 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Timer } from 'lucide-react';
+import { Timer, CalendarDays, X, Check } from 'lucide-react';
 import { useStore } from '@/hooks/use-store';
 
-const NEET_DATE = new Date('2027-05-02T00:00:00');
-const TOTAL_DAYS = Math.ceil(
-  (NEET_DATE.getTime() - new Date('2026-01-01').getTime()) / (1000 * 60 * 60 * 24)
-);
+const DEFAULT_DATE = '2027-05-02';
+const START_REF = new Date('2026-01-01');
 
-function getTimeLeft() {
-  const diff = NEET_DATE.getTime() - Date.now();
+function parseDate(dateStr: string | null): Date {
+  if (!dateStr) return new Date(DEFAULT_DATE + 'T00:00:00');
+  return new Date(dateStr + 'T00:00:00');
+}
+
+function getTimeLeft(target: Date) {
+  const diff = target.getTime() - Date.now();
   if (diff <= 0) return { days: 0, hours: 0, minutes: 0, seconds: 0 };
   return {
     days: Math.floor(diff / 86400000),
@@ -49,7 +52,7 @@ function FlipUnit({ value, label, isDark }: { value: number; label: string; isDa
           animate={{ y: 0, opacity: 1, scale: 1 }}
           exit={{ y: 16, opacity: 0, scale: 0.82 }}
           transition={{ type: 'spring', stiffness: 420, damping: 30 }}
-          className="min-w-[50px] h-[54px] flex items-center justify-center rounded-2xl text-[22px] font-display font-black tabular-nums relative"
+          className="min-w-[46px] h-[50px] flex items-center justify-center rounded-2xl text-[20px] font-display font-black tabular-nums relative"
           style={{ ...numStyle, willChange: 'transform, opacity' }}
         >
           {display}
@@ -70,64 +73,73 @@ function FlipUnit({ value, label, isDark }: { value: number; label: string; isDa
 }
 
 export const Countdown: React.FC = () => {
-  const { theme } = useStore();
+  const { theme, testDate, setTestDate } = useStore();
   const isDark = theme === 'dark';
 
-  const [time, setTime] = useState(getTimeLeft);
+  const targetDate = useMemo(() => parseDate(testDate), [testDate]);
+  const totalDays = useMemo(() => Math.ceil(
+    (targetDate.getTime() - START_REF.getTime()) / (1000 * 60 * 60 * 24)
+  ), [targetDate]);
+
+  const [time, setTime] = useState(() => getTimeLeft(targetDate));
+  const [editing, setEditing] = useState(false);
+  const [inputVal, setInputVal] = useState(testDate || DEFAULT_DATE);
 
   useEffect(() => {
-    const id = setInterval(() => setTime(getTimeLeft()), 1000);
+    const id = setInterval(() => setTime(getTimeLeft(targetDate)), 1000);
     return () => clearInterval(id);
-  }, []);
+  }, [targetDate]);
+
+  useEffect(() => {
+    setInputVal(testDate || DEFAULT_DATE);
+  }, [testDate]);
+
+  const handleSaveDate = () => {
+    if (inputVal) setTestDate(inputVal);
+    setEditing(false);
+  };
 
   const remainPct = useMemo(
-    () => Math.min(100, Math.max(0, (time.days / TOTAL_DAYS) * 100)),
-    [time.days]
+    () => Math.min(100, Math.max(0, (time.days / totalDays) * 100)),
+    [time.days, totalDays]
   );
 
-  /* ── Theme-based styles ── */
+  const displayDateStr = useMemo(() => {
+    const d = parseDate(testDate);
+    return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  }, [testDate]);
+
   const wrapStyle: React.CSSProperties = isDark
     ? {
-        borderRadius: 24,
+        borderRadius: 20,
         background: 'linear-gradient(135deg, #3b1fa3 0%, #6d28d9 45%, #0d6f92 100%)',
-        boxShadow: '0 16px 48px rgba(109,40,217,0.45), 0 0 0 1px rgba(255,255,255,0.07)',
+        boxShadow: '0 12px 40px rgba(109,40,217,0.40), 0 0 0 1px rgba(255,255,255,0.07)',
         padding: '1px',
       }
     : {
-        borderRadius: 24,
+        borderRadius: 20,
         background: 'linear-gradient(135deg, #7c3aed 0%, #a855f7 50%, #06b6d4 100%)',
-        boxShadow: '0 12px 40px rgba(124,58,237,0.28), 0 0 0 1px rgba(255,255,255,0.6)',
+        boxShadow: '0 8px 32px rgba(124,58,237,0.25), 0 0 0 1px rgba(255,255,255,0.6)',
         padding: '1px',
       };
 
   const innerStyle: React.CSSProperties = isDark
     ? {
-        borderRadius: 23,
+        borderRadius: 19,
         background: 'linear-gradient(145deg, #130c30 0%, #0e1a2e 60%, #060f1e 100%)',
-        padding: '20px 20px 18px',
+        padding: '16px 16px 14px',
         position: 'relative',
         overflow: 'hidden',
       }
     : {
-        borderRadius: 23,
+        borderRadius: 19,
         background: 'linear-gradient(145deg, rgba(245,243,255,0.92) 0%, rgba(236,252,255,0.88) 100%)',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
-        padding: '20px 20px 18px',
+        padding: '16px 16px 14px',
         position: 'relative',
         overflow: 'hidden',
       };
-
-  const orb1Style: React.CSSProperties = {
-    background: isDark
-      ? 'radial-gradient(circle, rgba(109,40,217,0.4) 0%, transparent 70%)'
-      : 'radial-gradient(circle, rgba(124,58,237,0.15) 0%, transparent 70%)',
-  };
-  const orb2Style: React.CSSProperties = {
-    background: isDark
-      ? 'radial-gradient(circle, rgba(6,182,212,0.3) 0%, transparent 70%)'
-      : 'radial-gradient(circle, rgba(6,182,212,0.12) 0%, transparent 70%)',
-  };
 
   const labelColor = isDark ? 'rgba(255,255,255,0.45)' : 'rgba(109,40,217,0.55)';
   const dateColor = isDark ? 'rgba(255,255,255,0.75)' : 'rgba(109,40,217,0.85)';
@@ -135,66 +147,90 @@ export const Countdown: React.FC = () => {
   const trackColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(124,58,237,0.12)';
 
   return (
-    <motion.div
-      style={wrapStyle}
-      animate={isDark ? {} : {}}
-      transition={{ duration: 0.4 }}
-      className="relative overflow-hidden"
-    >
+    <motion.div style={wrapStyle} className="relative overflow-hidden">
       <div style={innerStyle}>
-        {/* Orbs */}
-        <div className="absolute -top-10 -right-10 w-36 h-36 rounded-full pointer-events-none" style={orb1Style} />
-        <div className="absolute -bottom-8 -left-8 w-28 h-28 rounded-full pointer-events-none" style={orb2Style} />
+        <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full pointer-events-none"
+          style={{ background: isDark ? 'radial-gradient(circle, rgba(109,40,217,0.4) 0%, transparent 70%)' : 'radial-gradient(circle, rgba(124,58,237,0.15) 0%, transparent 70%)' }} />
+        <div className="absolute -bottom-6 -left-6 w-24 h-24 rounded-full pointer-events-none"
+          style={{ background: isDark ? 'radial-gradient(circle, rgba(6,182,212,0.3) 0%, transparent 70%)' : 'radial-gradient(circle, rgba(6,182,212,0.12) 0%, transparent 70%)' }} />
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-4 relative z-10">
-          <div className="flex items-center gap-2.5">
-            <div
-              className="p-2 rounded-xl shadow-lg"
-              style={{
-                background: 'linear-gradient(135deg, #7c3aed, #06b6d4)',
-                boxShadow: '0 4px 14px rgba(124,58,237,0.5)',
-              }}
-            >
-              <Timer className="w-4 h-4 text-white" />
+        <div className="flex items-center justify-between mb-3 relative z-10">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-xl shadow-lg"
+              style={{ background: 'linear-gradient(135deg, #7c3aed, #06b6d4)', boxShadow: '0 3px 10px rgba(124,58,237,0.45)' }}>
+              <Timer className="w-3.5 h-3.5 text-white" />
             </div>
             <div>
-              <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: labelColor }}>
-                Countdown to
-              </p>
-              <p
-                className="text-sm font-display font-extrabold"
-                style={{
-                  background: 'linear-gradient(90deg, #a78bfa, #22d3ee)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
-                }}
-              >
-                NEET 2027
+              <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: labelColor }}>Countdown to</p>
+              <p className="text-[13px] font-display font-extrabold"
+                style={{ background: 'linear-gradient(90deg, #a78bfa, #22d3ee)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+                {testDate ? 'Your Exam' : 'NEET 2027'}
               </p>
             </div>
           </div>
-          <div className="text-right">
-            <p className="text-[9px] font-semibold" style={{ color: labelColor }}>Exam Date</p>
-            <p className="text-[11px] font-bold" style={{ color: dateColor }}>2 May 2027</p>
-          </div>
+          <button
+            onClick={() => setEditing(e => !e)}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-bold transition-all"
+            style={{
+              background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(124,58,237,0.08)',
+              color: dateColor,
+              border: isDark ? '1px solid rgba(255,255,255,0.10)' : '1px solid rgba(124,58,237,0.15)',
+            }}
+          >
+            <CalendarDays className="w-3 h-3" />
+            {displayDateStr}
+          </button>
         </div>
 
+        {/* Date picker */}
+        <AnimatePresence>
+          {editing && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden mb-3 relative z-10"
+            >
+              <div className="flex gap-2 items-center rounded-2xl p-2"
+                style={{ background: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(124,58,237,0.07)' }}>
+                <input
+                  type="date"
+                  value={inputVal}
+                  onChange={e => setInputVal(e.target.value)}
+                  className="flex-1 bg-transparent text-sm font-bold outline-none"
+                  style={{ color: isDark ? '#fff' : 'hsl(260 85% 40%)' }}
+                  min={new Date().toISOString().split('T')[0]}
+                />
+                <button onClick={handleSaveDate}
+                  className="p-1.5 rounded-xl text-white"
+                  style={{ background: 'linear-gradient(135deg, #22c55e, #16a34a)' }}>
+                  <Check className="w-3.5 h-3.5" />
+                </button>
+                <button onClick={() => setEditing(false)}
+                  className="p-1.5 rounded-xl"
+                  style={{ background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }}>
+                  <X className="w-3.5 h-3.5" style={{ color: labelColor }} />
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Flip units */}
-        <div className="flex items-end justify-center gap-1.5 relative z-10 mb-4">
+        <div className="flex items-end justify-center gap-1 relative z-10 mb-3">
           <FlipUnit value={time.days} label="Days" isDark={isDark} />
-          <span className="text-xl font-black mb-3.5 select-none" style={{ color: sepColor }}>:</span>
-          <FlipUnit value={time.hours} label="Hours" isDark={isDark} />
-          <span className="text-xl font-black mb-3.5 select-none" style={{ color: sepColor }}>:</span>
+          <span className="text-lg font-black mb-3 select-none" style={{ color: sepColor }}>:</span>
+          <FlipUnit value={time.hours} label="Hrs" isDark={isDark} />
+          <span className="text-lg font-black mb-3 select-none" style={{ color: sepColor }}>:</span>
           <FlipUnit value={time.minutes} label="Mins" isDark={isDark} />
-          <span className="text-xl font-black mb-3.5 select-none" style={{ color: sepColor }}>:</span>
+          <span className="text-lg font-black mb-3 select-none" style={{ color: sepColor }}>:</span>
           <FlipUnit value={time.seconds} label="Secs" isDark={isDark} />
         </div>
 
         {/* Progress bar */}
         <div className="relative z-10">
-          <div className="flex justify-between text-[9px] font-bold mb-1.5" style={{ color: labelColor }}>
+          <div className="flex justify-between text-[9px] font-bold mb-1" style={{ color: labelColor }}>
             <span>Time remaining</span>
             <span>{time.days} days left</span>
           </div>
