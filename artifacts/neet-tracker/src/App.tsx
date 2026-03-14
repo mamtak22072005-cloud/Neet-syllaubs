@@ -10,16 +10,21 @@ import { Subject } from "@/pages/Subject";
 import { Chapter } from "@/pages/Chapter";
 import { Todos } from "@/pages/Todos";
 import { TodoDetail } from "@/pages/TodoDetail";
+import { Progress } from "@/pages/Progress";
+import { Profile } from "@/pages/Profile";
+import { StudyGroup } from "@/pages/StudyGroup";
 import { AnimatePresence } from "framer-motion";
 
 const queryClient = new QueryClient();
 
-// We map routes and use AnimatePresence for transitions
 function Router() {
   return (
     <AnimatePresence mode="wait">
       <Switch>
         <Route path="/" component={Home} />
+        <Route path="/progress" component={Progress} />
+        <Route path="/study" component={StudyGroup} />
+        <Route path="/profile" component={Profile} />
         <Route path="/subject/:id" component={Subject} />
         <Route path="/subject/:subId/chapter/:chapId" component={Chapter} />
         <Route path="/todos" component={Todos} />

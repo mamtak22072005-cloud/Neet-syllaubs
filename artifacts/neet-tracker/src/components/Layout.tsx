@@ -3,6 +3,7 @@ import { useStore } from '@/hooks/use-store';
 import { Moon, Sun } from 'lucide-react';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { InstallPrompt } from './InstallPrompt';
+import { BottomNav } from './BottomNav';
 
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { theme, toggleTheme } = useStore();
@@ -43,11 +44,12 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           </motion.button>
         </header>
 
-        <main className="p-4 sm:p-6 pb-24 min-h-[calc(100vh-140px)]">
+        <main className="p-4 sm:p-6 pb-36 min-h-[calc(100vh-140px)]">
           {children}
         </main>
 
         <InstallPrompt />
+        <BottomNav />
 
         <footer className="pb-12 pt-2 px-6 text-center">
           <div className="h-px w-full rounded-full mb-6 opacity-40"
