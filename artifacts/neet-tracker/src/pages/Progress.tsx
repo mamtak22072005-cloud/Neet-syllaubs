@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'wouter';
 import { useStore } from '@/hooks/use-store';
 import { SYLLABUS, SubjectId } from '@/lib/syllabus';
+import { ProgressCircle } from '@/components/ProgressCircle';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Atom, FlaskConical, Leaf, Dna, ChevronDown, CheckCircle2, Circle } from 'lucide-react';
 
@@ -17,11 +18,6 @@ const pageVariants = {
   animate: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] } },
 };
 
-const itemVariants = {
-  initial: { opacity: 0, y: 12 },
-  animate: { opacity: 1, y: 0 },
-};
-
 export const Progress: React.FC = () => {
   const { getSubjectProgress, getChapterProgress, getTotalProgress } = useStore();
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -29,33 +25,31 @@ export const Progress: React.FC = () => {
 
   return (
     <motion.div variants={pageVariants} initial="initial" animate="animate" className="space-y-4">
-      {/* Header */}
-      <div>
-        <h2 className="text-xl font-display font-extrabold text-foreground">Progress Details</h2>
-        <p className="text-xs text-muted-foreground mt-0.5">Chapter-wise breakdown of your preparation</p>
-      </div>
 
-      {/* Overall */}
-      <motion.div variants={itemVariants} className="glass-panel p-5">
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-sm font-bold text-foreground">Overall Progress</p>
-          <span
-            className="text-2xl font-display font-black"
-            style={{ background: 'linear-gradient(90deg, #7c3aed, #06b6d4)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}
-          >
-            {total}%
-          </span>
-        </div>
-        <div className="h-3 rounded-full overflow-hidden bg-foreground/8">
-          <motion.div
-            className="h-full rounded-full"
-            style={{ background: 'linear-gradient(90deg, #7c3aed, #06b6d4)' }}
-            initial={{ width: 0 }}
-            animate={{ width: `${total}%` }}
-            transition={{ duration: 1, ease: 'easeOut' }}
-          />
-        </div>
-        <div className="mt-3 grid grid-cols-4 gap-2">
+      {/* ── Hero Progress Circle ── */}
+      <div
+        className="relative overflow-hidden rounded-3xl px-5 py-7 flex flex-col items-center text-center"
+        style={{
+          background: 'linear-gradient(135deg, rgba(79,31,191,0.15) 0%, rgba(6,182,212,0.08) 100%)',
+          border: '1px solid rgba(124,58,237,0.15)',
+        }}
+      >
+        <div className="absolute -top-10 -right-10 w-36 h-36 rounded-full pointer-events-none"
+          style={{ background: 'radial-gradient(circle, rgba(124,58,237,0.3) 0%, transparent 70%)' }} />
+        <div className="absolute -bottom-10 -left-10 w-36 h-36 rounded-full pointer-events-none"
+          style={{ background: 'radial-gradient(circle, rgba(6,182,212,0.2) 0%, transparent 70%)' }} />
+
+        <p
+          className="text-xs font-black uppercase tracking-widest mb-4"
+          style={{ background: 'linear-gradient(90deg, #a78bfa, #22d3ee)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}
+        >
+          Overall Progress
+        </p>
+        <ProgressCircle progress={total} size={160} strokeWidth={14} />
+        <p className="text-xs text-muted-foreground mt-3 font-medium">Track Your Entire NEET 2027 Preparation</p>
+
+        {/* Subject mini row */}
+        <div className="flex gap-5 justify-center mt-4 pt-4 w-full border-t border-white/8">
           {SUBJECTS.map(s => {
             const pct = Math.round(getSubjectProgress(s.id));
             return (
@@ -66,9 +60,9 @@ export const Progress: React.FC = () => {
             );
           })}
         </div>
-      </motion.div>
+      </div>
 
-      {/* Per-subject expandable sections */}
+      {/* ── Per-subject expandable ── */}
       {SUBJECTS.map((subject, idx) => {
         const subPct = Math.round(getSubjectProgress(subject.id));
         const allChaps = [...SYLLABUS[subject.id].class11, ...SYLLABUS[subject.id].class12];
@@ -78,8 +72,9 @@ export const Progress: React.FC = () => {
         return (
           <motion.div
             key={subject.id}
-            variants={itemVariants}
-            transition={{ delay: idx * 0.05 }}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: idx * 0.06 }}
             className="glass-panel overflow-hidden"
           >
             <button

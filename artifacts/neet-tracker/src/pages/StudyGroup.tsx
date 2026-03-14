@@ -9,8 +9,8 @@ const pageVariants = {
 };
 
 function generateGroupCode(): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+  const digits = Math.floor(1000 + Math.random() * 9000);
+  return `NEERAJ${digits}`;
 }
 
 function getRankStyle(rank: number) {
