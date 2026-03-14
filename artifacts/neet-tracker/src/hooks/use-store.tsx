@@ -16,6 +16,7 @@ export interface GroupMember {
   name: string;
   avatar: string | null;
   progress: number;
+  studyTimeToday: number;
   updatedAt: string;
   isMe?: boolean;
 }
@@ -265,11 +266,19 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     })();
     const myPct = getMyProgressValue();
     const savedProfile = safeParse(localStorage.getItem('neet_profile'), { name: '', avatar: null });
+    const todayStudy = (() => {
+      try {
+        const raw = localStorage.getItem('neet_study_time');
+        const d = raw ? JSON.parse(raw) : null;
+        return d && d.date === new Date().toDateString() ? (d.seconds || 0) : 0;
+      } catch { return 0; }
+    })();
     const myMember: GroupMember = {
       id: myId,
       name: savedProfile.name || 'You',
       avatar: savedProfile.avatar,
       progress: myPct,
+      studyTimeToday: todayStudy,
       updatedAt: new Date().toISOString(),
       isMe: true,
     };
@@ -291,11 +300,18 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const myId = localStorage.getItem('neet_my_id');
       const myPct = getMyProgressValue();
       const savedProfile = safeParse(localStorage.getItem('neet_profile'), { name: '', avatar: null });
+      const todayStudy = (() => {
+        try {
+          const raw = localStorage.getItem('neet_study_time');
+          const d = raw ? JSON.parse(raw) : null;
+          return d && d.date === new Date().toDateString() ? (d.seconds || 0) : 0;
+        } catch { return 0; }
+      })();
       const updated: StudyGroup = {
         ...prev,
         members: prev.members.map(m =>
           m.id === myId
-            ? { ...m, name: savedProfile.name || m.name, avatar: savedProfile.avatar, progress: myPct, updatedAt: new Date().toISOString() }
+            ? { ...m, name: savedProfile.name || m.name, avatar: savedProfile.avatar, progress: myPct, studyTimeToday: todayStudy, updatedAt: new Date().toISOString() }
             : m
         ),
       };
@@ -309,11 +325,19 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const myId = localStorage.getItem('neet_my_id') || generateId();
     localStorage.setItem('neet_my_id', myId);
     const savedProfile = safeParse(localStorage.getItem('neet_profile'), { name: '', avatar: null });
+    const todayStudy = (() => {
+      try {
+        const raw = localStorage.getItem('neet_study_time');
+        const d = raw ? JSON.parse(raw) : null;
+        return d && d.date === new Date().toDateString() ? (d.seconds || 0) : 0;
+      } catch { return 0; }
+    })();
     const payload: GroupMember = {
       id: myId,
       name: savedProfile.name || 'Friend',
       avatar: savedProfile.avatar,
       progress: getMyProgressValue(),
+      studyTimeToday: todayStudy,
       updatedAt: new Date().toISOString(),
     };
     return btoa(JSON.stringify(payload));
