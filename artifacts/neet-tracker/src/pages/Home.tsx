@@ -4,7 +4,11 @@ import { useStore } from '@/hooks/use-store';
 import { SYLLABUS, SubjectId } from '@/lib/syllabus';
 import { ProgressBar } from '@/components/ProgressBar';
 import { Countdown } from '@/components/Countdown';
-import { Flame, Atom, FlaskConical, Leaf, Dna, Quote, ChevronRight } from 'lucide-react';
+import { StudyTimer } from '@/components/StudyTimer';
+import {
+  Flame, Atom, FlaskConical, Leaf, Dna, Quote, ChevronRight,
+  CheckCircle2, Circle, Plus, ArrowRight, ListTodo
+} from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const DOCTOR_QUOTES = [
@@ -46,44 +50,52 @@ function getGreeting() {
 
 const containerVariants = {
   hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.07 } },
+  show: { opacity: 1, transition: { staggerChildren: 0.06 } },
 };
 const itemVariants = {
-  hidden: { opacity: 0, y: 18 },
-  show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 280, damping: 22 } },
+  hidden: { opacity: 0, y: 14 },
+  show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } },
 };
 
 export const Home: React.FC = () => {
-  const { getTotalProgress, getSubjectProgress, getCompletedChapters, getTotalChapters, streak, profile } = useStore();
+  const { getTotalProgress, getSubjectProgress, getCompletedChapters, getTotalChapters, streak, profile, todos, toggleTodo, theme } = useStore();
   const overallProgress = getTotalProgress();
   const dailyQuote = useMemo(() => getDailyQuote(), []);
   const subjects: SubjectId[] = ['physics', 'chemistry', 'botany', 'zoology'];
   const displayName = profile.name?.trim() || null;
+  const isDark = theme === 'dark';
+
+  const pendingTodos = todos.filter(t => !t.completed).slice(0, 3);
+  const totalPending = todos.filter(t => !t.completed).length;
+
+  const sectionLabel = (text: string) => (
+    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2 px-1">{text}</p>
+  );
 
   return (
-    <motion.div variants={containerVariants} initial="hidden" animate="show" className="flex flex-col gap-3">
+    <motion.div variants={containerVariants} initial="hidden" animate="show" className="flex flex-col gap-2.5">
 
       {/* ── Welcome Banner ── */}
-      <motion.div variants={itemVariants} className="relative overflow-hidden rounded-3xl px-5 py-4"
+      <motion.div variants={itemVariants} className="relative overflow-hidden rounded-2xl px-4 py-3.5"
         style={{
           background: 'linear-gradient(135deg, rgba(124,58,237,0.18) 0%, rgba(6,182,212,0.10) 100%)',
           border: '1px solid rgba(124,58,237,0.15)',
         }}
       >
-        <div className="absolute -top-6 -right-6 w-20 h-20 rounded-full pointer-events-none"
+        <div className="absolute -top-5 -right-5 w-16 h-16 rounded-full pointer-events-none"
           style={{ background: 'radial-gradient(circle, rgba(124,58,237,0.35) 0%, transparent 70%)' }} />
         <div className="flex items-center justify-between">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">{getGreeting()}</p>
             {displayName ? (
               <p
-                className="text-lg font-display font-black mt-0.5 leading-tight"
+                className="text-base font-display font-black mt-0.5 leading-tight"
                 style={{
                   background: 'linear-gradient(90deg, hsl(var(--primary)), hsl(var(--secondary)))',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
                   backgroundClip: 'text',
-                  filter: 'drop-shadow(0 0 10px hsl(var(--primary)/0.4))',
+                  filter: 'drop-shadow(0 0 8px hsl(var(--primary)/0.4))',
                 }}
               >
                 {displayName} 👋
@@ -94,7 +106,6 @@ export const Home: React.FC = () => {
               </Link>
             )}
           </div>
-          {/* Overall % pill */}
           <div className="text-right">
             <div
               className="text-2xl font-display font-black"
@@ -110,8 +121,7 @@ export const Home: React.FC = () => {
             <p className="text-[9px] font-bold uppercase tracking-wide text-muted-foreground/60">Overall</p>
           </div>
         </div>
-        {/* Thin progress bar */}
-        <div className="mt-3 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(124,58,237,0.12)' }}>
+        <div className="mt-2.5 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(124,58,237,0.12)' }}>
           <motion.div
             className="h-full rounded-full"
             style={{ background: 'linear-gradient(90deg, #7c3aed, #06b6d4)' }}
@@ -122,60 +132,54 @@ export const Home: React.FC = () => {
         </div>
       </motion.div>
 
-      {/* ── Daily Motivation (compact) ── */}
-      <motion.div variants={itemVariants} className="glass-panel relative overflow-hidden px-4 py-3.5">
+      {/* ── Daily Motivation ── */}
+      <motion.div variants={itemVariants} className="glass-panel relative overflow-hidden px-4 py-3">
         <div className="absolute inset-0 bg-gradient-to-br from-violet-500/10 to-cyan-500/10 pointer-events-none" />
-        <div className="relative z-10 flex items-start gap-3">
-          <Quote className="w-4 h-4 text-primary/60 flex-shrink-0 mt-0.5" />
+        <div className="relative z-10 flex items-start gap-2.5">
+          <Quote className="w-3.5 h-3.5 text-primary/60 flex-shrink-0 mt-0.5" />
           <div>
             <p className="text-xs font-medium text-foreground/85 italic leading-relaxed line-clamp-2">
               {dailyQuote.quote}
             </p>
-            <p className="text-[10px] text-muted-foreground font-semibold mt-1">— {dailyQuote.author}</p>
+            <p className="text-[10px] text-muted-foreground font-semibold mt-0.5">— {dailyQuote.author}</p>
           </div>
         </div>
       </motion.div>
 
-      {/* ── Streak + Countdown row ── */}
-      <motion.div variants={itemVariants} className="flex gap-3">
-        {/* Streak */}
-        <div className="flex-1 glass-panel px-4 py-3 flex items-center gap-3 relative overflow-hidden">
-          <div className="absolute right-0 top-0 w-16 h-16 bg-orange-500/10 rounded-full blur-2xl -mr-4 -mt-4 pointer-events-none" />
+      {/* ── Streak + Progress row ── */}
+      <motion.div variants={itemVariants} className="flex gap-2.5">
+        <div className="flex-1 glass-panel px-3.5 py-2.5 flex items-center gap-2.5 relative overflow-hidden">
+          <div className="absolute right-0 top-0 w-12 h-12 bg-orange-500/10 rounded-full blur-xl pointer-events-none" />
           <motion.div
             animate={{ scale: [1, 1.2, 1] }}
             transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
-            className="p-2 rounded-xl flex-shrink-0"
-            style={{ background: 'linear-gradient(135deg, #fb923c, #ef4444)', boxShadow: '0 4px 14px rgba(251,146,60,0.4)' }}
+            className="p-1.5 rounded-xl flex-shrink-0"
+            style={{ background: 'linear-gradient(135deg, #fb923c, #ef4444)', boxShadow: '0 3px 10px rgba(251,146,60,0.4)' }}
           >
             <Flame className="w-4 h-4 text-white" />
           </motion.div>
           <div className="min-w-0">
             <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-wide">Streak</p>
             <p
-              className="text-xl font-display font-black leading-tight"
+              className="text-lg font-display font-black leading-tight"
               style={{ background: 'linear-gradient(135deg, #fb923c, #ef4444)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}
             >
-              {streak.currentStreak} <span className="text-xs text-muted-foreground font-normal" style={{ WebkitTextFillColor: 'initial' }}>days</span>
+              {streak.currentStreak} <span className="text-[11px] text-muted-foreground font-normal" style={{ WebkitTextFillColor: 'initial' }}>days</span>
             </p>
           </div>
         </div>
 
-        {/* Days to NEET */}
         <Link href="/progress" className="flex-1 block">
-          <div className="glass-panel px-4 py-3 h-full flex items-center gap-3 relative overflow-hidden cursor-pointer">
-            <div className="absolute left-0 top-0 w-16 h-16 bg-violet-500/10 rounded-full blur-2xl -ml-4 -mt-4 pointer-events-none" />
-            <div
-              className="p-2 rounded-xl flex-shrink-0"
-              style={{ background: 'linear-gradient(135deg, #7c3aed, #06b6d4)', boxShadow: '0 4px 14px rgba(124,58,237,0.4)' }}
-            >
+          <div className="glass-panel px-3.5 py-2.5 h-full flex items-center gap-2.5 relative overflow-hidden cursor-pointer">
+            <div className="absolute left-0 top-0 w-12 h-12 bg-violet-500/10 rounded-full blur-xl pointer-events-none" />
+            <div className="p-1.5 rounded-xl flex-shrink-0"
+              style={{ background: 'linear-gradient(135deg, #7c3aed, #06b6d4)', boxShadow: '0 3px 10px rgba(124,58,237,0.4)' }}>
               <ChevronRight className="w-4 h-4 text-white" />
             </div>
             <div className="min-w-0">
-              <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-wide">Details</p>
-              <p
-                className="text-sm font-display font-black leading-tight"
-                style={{ background: 'linear-gradient(135deg, #a78bfa, #22d3ee)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}
-              >
+              <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-wide">Detailed</p>
+              <p className="text-sm font-display font-black leading-tight"
+                style={{ background: 'linear-gradient(135deg, #a78bfa, #22d3ee)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
                 Progress →
               </p>
             </div>
@@ -183,10 +187,10 @@ export const Home: React.FC = () => {
         </Link>
       </motion.div>
 
-      {/* ── Subject Cards ── */}
+      {/* ── Subjects ── */}
       <motion.div variants={itemVariants}>
-        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2.5 px-1">Subjects</p>
-        <div className="grid grid-cols-2 gap-2.5">
+        {sectionLabel('Subjects')}
+        <div className="grid grid-cols-2 gap-2">
           {subjects.map(sub => {
             const s = SYLLABUS[sub];
             const prog = getSubjectProgress(sub);
@@ -198,13 +202,13 @@ export const Home: React.FC = () => {
               <Link key={sub} href={`/subject/${sub}`} className="block outline-none">
                 <motion.div
                   whileTap={{ scale: 0.96 }}
-                  className="glass-panel-interactive p-4 flex flex-col cursor-pointer relative overflow-hidden"
+                  className="glass-panel-interactive p-3.5 flex flex-col cursor-pointer relative overflow-hidden"
                 >
                   <div className={`absolute inset-0 bg-gradient-to-br ${cfg.color} opacity-[0.07] pointer-events-none`} />
-                  <div className="absolute -right-4 -top-4 w-16 h-16 rounded-full opacity-20 pointer-events-none"
+                  <div className="absolute -right-3 -top-3 w-12 h-12 rounded-full opacity-20 pointer-events-none"
                     style={{ background: `radial-gradient(circle, ${cfg.grad}, transparent)` }} />
 
-                  <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${cfg.color} flex items-center justify-center mb-3 shadow-lg relative z-10`}>
+                  <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${cfg.color} flex items-center justify-center mb-2.5 shadow-lg relative z-10`}>
                     {cfg.icon}
                   </div>
 
@@ -213,12 +217,12 @@ export const Home: React.FC = () => {
                     <p className="text-[10px] text-muted-foreground font-semibold mt-0.5">{completed}/{total}</p>
                   </div>
 
-                  <div className="mt-2.5 relative z-10">
+                  <div className="mt-2 relative z-10">
                     <div className="flex justify-between text-[10px] font-bold mb-1">
                       <span className="text-muted-foreground/70">Progress</span>
                       <span className={`bg-gradient-to-r ${cfg.color} bg-clip-text text-transparent`}>{Math.round(prog)}%</span>
                     </div>
-                    <ProgressBar progress={prog} colorClass={`bg-gradient-to-r ${cfg.color}`} height={5} />
+                    <ProgressBar progress={prog} colorClass={`bg-gradient-to-r ${cfg.color}`} height={4} />
                   </div>
                 </motion.div>
               </Link>
@@ -227,8 +231,87 @@ export const Home: React.FC = () => {
         </div>
       </motion.div>
 
-      {/* ── Countdown (compact) ── */}
+      {/* ── To-Do Mini Section ── */}
       <motion.div variants={itemVariants}>
+        <div className="flex items-center justify-between mb-2 px-1">
+          {sectionLabel('To-Do')}
+          <Link href="/todos">
+            <span className="text-[10px] font-black text-primary flex items-center gap-0.5 -mt-2">
+              See All <ArrowRight className="w-3 h-3" />
+            </span>
+          </Link>
+        </div>
+        <div
+          className="rounded-2xl overflow-hidden"
+          style={{
+            background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.70)',
+            border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(124,58,237,0.12)',
+            backdropFilter: isDark ? undefined : 'blur(16px)',
+          }}
+        >
+          {pendingTodos.length === 0 ? (
+            <Link href="/todos">
+              <div className="px-4 py-3.5 flex items-center gap-3 cursor-pointer">
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center"
+                  style={{ background: 'linear-gradient(135deg, #7c3aed, #06b6d4)' }}>
+                  <ListTodo className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-foreground">No pending tasks</p>
+                  <p className="text-[10px] text-muted-foreground">Tap to add tasks for today</p>
+                </div>
+                <Plus className="w-4 h-4 text-primary ml-auto" />
+              </div>
+            </Link>
+          ) : (
+            <>
+              {pendingTodos.map((task, i) => (
+                <div
+                  key={task.id}
+                  className="flex items-center gap-3 px-4 py-2.5"
+                  style={{
+                    borderBottom: i < pendingTodos.length - 1
+                      ? isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(124,58,237,0.07)'
+                      : undefined
+                  }}
+                >
+                  <button
+                    onClick={() => toggleTodo(task.id)}
+                    className="flex-shrink-0 text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    <Circle className="w-5 h-5" />
+                  </button>
+                  <Link href={`/todos/${task.id}`} className="flex-1 min-w-0 block">
+                    <p className="text-sm font-semibold text-foreground truncate">{task.title}</p>
+                    {task.description ? (
+                      <p className="text-[10px] text-muted-foreground truncate">{task.description}</p>
+                    ) : null}
+                  </Link>
+                </div>
+              ))}
+              {totalPending > 3 && (
+                <Link href="/todos">
+                  <div className="px-4 py-2.5 flex items-center justify-center gap-1"
+                    style={{ borderTop: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(124,58,237,0.07)' }}>
+                    <span className="text-[11px] font-bold text-primary">+{totalPending - 3} more tasks</span>
+                    <ArrowRight className="w-3 h-3 text-primary" />
+                  </div>
+                </Link>
+              )}
+            </>
+          )}
+        </div>
+      </motion.div>
+
+      {/* ── Study Timer Section ── */}
+      <motion.div variants={itemVariants}>
+        {sectionLabel('Study Timer')}
+        <StudyTimer />
+      </motion.div>
+
+      {/* ── Countdown ── */}
+      <motion.div variants={itemVariants}>
+        {sectionLabel('Exam Countdown')}
         <Countdown />
       </motion.div>
 

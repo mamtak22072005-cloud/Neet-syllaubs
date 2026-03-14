@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useStore } from '@/hooks/use-store';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Camera, User, Save, Flame, CheckSquare, BarChart3, Trophy, Copy, Check,
-  Share2, Target, Star, BookOpen, Zap, Heart
+  Share2, Target, Star, BookOpen, Zap, Heart, Pencil, X
 } from 'lucide-react';
 
 const pageVariants = {
@@ -26,6 +26,7 @@ function getRank(pct: number) {
 
 export const Profile: React.FC = () => {
   const { profile, updateProfile, streak, getTotalProgress, todos, generateShareCode, getSubjectProgress } = useStore();
+  const [editing, setEditing] = useState(false);
   const [name, setName] = useState(profile.name);
   const [avatar, setAvatar] = useState<string | null>(profile.avatar);
   const [targetScore, setTargetScore] = useState(() => localStorage.getItem('neet_target') || '650');
@@ -36,7 +37,7 @@ export const Profile: React.FC = () => {
   const totalPct = Math.round(getTotalProgress());
   const doneTodos = todos.filter(t => t.completed).length;
   const rank = getRank(totalPct);
-  const initials = (name.trim() || 'N').slice(0, 2).toUpperCase();
+  const initials = ((profile.name || name).trim() || 'N').slice(0, 2).toUpperCase();
 
   const subjectsPct = {
     Physics: Math.round(getSubjectProgress('physics')),
@@ -62,7 +63,16 @@ export const Profile: React.FC = () => {
     updateProfile(name.trim(), avatar);
     localStorage.setItem('neet_target', targetScore);
     setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    setTimeout(() => {
+      setSaved(false);
+      setEditing(false);
+    }, 1500);
+  };
+
+  const handleCancelEdit = () => {
+    setName(profile.name);
+    setAvatar(profile.avatar);
+    setEditing(false);
   };
 
   const handleCopyCode = () => {
@@ -83,12 +93,15 @@ export const Profile: React.FC = () => {
     }
   };
 
+  const displayName = profile.name?.trim() || 'NEET Aspirant';
+  const displayAvatar = profile.avatar;
+
   return (
-    <motion.div variants={pageVariants} initial="initial" animate="animate" className="space-y-4">
+    <motion.div variants={pageVariants} initial="initial" animate="animate" className="space-y-3">
 
       {/* ── Hero Profile Card ── */}
       <div
-        className="relative overflow-hidden rounded-3xl px-5 py-6"
+        className="relative overflow-hidden rounded-3xl px-5 py-5"
         style={{
           background: 'linear-gradient(135deg, rgba(79,31,191,0.20) 0%, rgba(14,127,163,0.15) 100%)',
           border: '1px solid rgba(124,58,237,0.18)',
@@ -103,23 +116,16 @@ export const Profile: React.FC = () => {
           {/* Avatar */}
           <div className="relative flex-shrink-0">
             <div
-              className="w-20 h-20 rounded-3xl overflow-hidden flex items-center justify-center text-white text-xl font-black"
+              className="w-18 h-18 rounded-3xl overflow-hidden flex items-center justify-center text-white text-xl font-black"
               style={{
-                background: avatar ? 'transparent' : 'linear-gradient(135deg, #7c3aed, #06b6d4)',
+                width: 72, height: 72,
+                background: displayAvatar ? 'transparent' : 'linear-gradient(135deg, #7c3aed, #06b6d4)',
                 boxShadow: '0 8px 24px rgba(124,58,237,0.45)',
+                borderRadius: 20,
               }}
             >
-              {avatar ? <img src={avatar} alt="avatar" className="w-full h-full object-cover" /> : initials}
+              {displayAvatar ? <img src={displayAvatar} alt="avatar" className="w-full h-full object-cover" /> : initials}
             </div>
-            <motion.button
-              whileTap={{ scale: 0.9 }}
-              onClick={() => fileRef.current?.click()}
-              className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full flex items-center justify-center text-white"
-              style={{ background: 'linear-gradient(135deg, #7c3aed, #06b6d4)', boxShadow: '0 3px 10px rgba(124,58,237,0.5)' }}
-            >
-              <Camera className="w-3 h-3" />
-            </motion.button>
-            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhoto} />
           </div>
 
           {/* Info */}
@@ -133,7 +139,7 @@ export const Profile: React.FC = () => {
                 backgroundClip: 'text',
               }}
             >
-              {name.trim() || 'NEET Aspirant'}
+              {displayName}
             </div>
             <div className="flex items-center gap-1.5 mt-1">
               <span className="text-base">{rank.icon}</span>
@@ -142,60 +148,112 @@ export const Profile: React.FC = () => {
             <div className="text-[10px] text-muted-foreground mt-0.5 font-medium">NEET 2027 Aspirant</div>
           </div>
 
-          {/* Progress donut mini */}
-          <div className="flex-shrink-0 text-center">
-            <div
-              className="text-2xl font-display font-black"
-              style={{ background: 'linear-gradient(135deg, #a78bfa, #22d3ee)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}
-            >
-              {totalPct}%
+          {/* Right side: progress + edit button */}
+          <div className="flex-shrink-0 flex flex-col items-center gap-2">
+            <div className="text-center">
+              <div
+                className="text-2xl font-display font-black"
+                style={{ background: 'linear-gradient(135deg, #a78bfa, #22d3ee)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}
+              >
+                {totalPct}%
+              </div>
+              <div className="text-[9px] text-muted-foreground font-bold uppercase tracking-wide">Done</div>
             </div>
-            <div className="text-[9px] text-muted-foreground font-bold uppercase tracking-wide">Done</div>
+            {/* Edit button */}
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={() => setEditing(true)}
+              className="w-8 h-8 rounded-xl flex items-center justify-center text-white"
+              style={{ background: 'linear-gradient(135deg, #7c3aed, #06b6d4)', boxShadow: '0 3px 10px rgba(124,58,237,0.4)' }}
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </motion.button>
           </div>
         </div>
       </div>
 
-      {/* ── Name + Photo Edit ── */}
-      <div className="glass-panel p-4 space-y-3">
-        <p className="text-[11px] font-black uppercase tracking-widest text-muted-foreground">Edit Profile</p>
-        <div className="relative">
-          <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
-          <input
-            value={name}
-            onChange={e => setName(e.target.value)}
-            placeholder="Enter your name"
-            maxLength={30}
-            className="w-full pl-9 pr-4 py-3 rounded-2xl text-sm font-medium text-foreground placeholder:text-muted-foreground/40 outline-none"
-            style={{ background: 'rgba(124,58,237,0.07)', border: '1px solid rgba(124,58,237,0.18)' }}
-          />
-        </div>
-        {/* Target score */}
-        <div className="relative">
-          <Target className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
-          <input
-            type="number"
-            value={targetScore}
-            onChange={e => setTargetScore(e.target.value)}
-            placeholder="Target score (e.g. 680)"
-            min={0} max={720}
-            className="w-full pl-9 pr-4 py-3 rounded-2xl text-sm font-medium text-foreground placeholder:text-muted-foreground/40 outline-none"
-            style={{ background: 'rgba(124,58,237,0.07)', border: '1px solid rgba(124,58,237,0.18)' }}
-          />
-        </div>
-        <motion.button
-          whileTap={{ scale: 0.96 }}
-          onClick={handleSave}
-          className="w-full py-3 rounded-2xl font-bold text-sm text-white flex items-center justify-center gap-2"
-          style={{
-            background: saved ? 'linear-gradient(135deg, #22c55e, #16a34a)' : 'linear-gradient(135deg, #7c3aed, #06b6d4)',
-            boxShadow: saved ? '0 4px 16px rgba(34,197,94,0.4)' : '0 4px 16px rgba(124,58,237,0.4)',
-            transition: 'background 0.3s',
-          }}
-        >
-          {saved ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
-          {saved ? 'Saved!' : 'Save Profile'}
-        </motion.button>
-      </div>
+      {/* ── Edit Panel (slide-in) ── */}
+      <AnimatePresence>
+        {editing && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="glass-panel p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] font-black uppercase tracking-widest text-muted-foreground">Edit Profile</p>
+                <button onClick={handleCancelEdit} className="p-1 rounded-lg text-muted-foreground hover:text-foreground">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Avatar edit row */}
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-12 h-12 rounded-2xl overflow-hidden flex items-center justify-center text-white text-sm font-black flex-shrink-0"
+                  style={{
+                    background: avatar ? 'transparent' : 'linear-gradient(135deg, #7c3aed, #06b6d4)',
+                    boxShadow: '0 4px 12px rgba(124,58,237,0.35)',
+                  }}
+                >
+                  {avatar ? <img src={avatar} alt="avatar" className="w-full h-full object-cover" /> : initials}
+                </div>
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => fileRef.current?.click()}
+                  className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold"
+                  style={{ background: 'rgba(124,58,237,0.10)', border: '1px solid rgba(124,58,237,0.20)', color: 'hsl(var(--primary))' }}
+                >
+                  <Camera className="w-3.5 h-3.5" />
+                  Change Photo
+                </motion.button>
+                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhoto} />
+              </div>
+
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
+                <input
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  placeholder="Enter your name"
+                  maxLength={30}
+                  className="w-full pl-9 pr-4 py-2.5 rounded-2xl text-sm font-medium text-foreground placeholder:text-muted-foreground/40 outline-none"
+                  style={{ background: 'rgba(124,58,237,0.07)', border: '1px solid rgba(124,58,237,0.18)' }}
+                />
+              </div>
+
+              <div className="relative">
+                <Target className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
+                <input
+                  type="number"
+                  value={targetScore}
+                  onChange={e => setTargetScore(e.target.value)}
+                  placeholder="Target score (e.g. 680)"
+                  min={0} max={720}
+                  className="w-full pl-9 pr-4 py-2.5 rounded-2xl text-sm font-medium text-foreground placeholder:text-muted-foreground/40 outline-none"
+                  style={{ background: 'rgba(124,58,237,0.07)', border: '1px solid rgba(124,58,237,0.18)' }}
+                />
+              </div>
+
+              <motion.button
+                whileTap={{ scale: 0.96 }}
+                onClick={handleSave}
+                className="w-full py-2.5 rounded-2xl font-bold text-sm text-white flex items-center justify-center gap-2"
+                style={{
+                  background: saved ? 'linear-gradient(135deg, #22c55e, #16a34a)' : 'linear-gradient(135deg, #7c3aed, #06b6d4)',
+                  boxShadow: saved ? '0 4px 16px rgba(34,197,94,0.4)' : '0 4px 16px rgba(124,58,237,0.4)',
+                  transition: 'background 0.3s',
+                }}
+              >
+                {saved ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
+                {saved ? 'Saved!' : 'Save Profile'}
+              </motion.button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Stats Grid ── */}
       <div className="grid grid-cols-4 gap-2">
@@ -269,18 +327,17 @@ export const Profile: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Progress Code + Referral ── */}
+      {/* ── Share & Connect ── */}
       <div className="glass-panel p-4 space-y-3">
         <div className="flex items-center gap-2 mb-1">
           <Zap className="w-4 h-4 text-primary" />
           <span className="text-sm font-bold text-foreground">Share & Connect</span>
         </div>
 
-        {/* Progress code */}
         <motion.button
           whileTap={{ scale: 0.96 }}
           onClick={handleCopyCode}
-          className="w-full py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2"
+          className="w-full py-2.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2"
           style={{
             background: copied ? 'rgba(34,197,94,0.12)' : 'rgba(124,58,237,0.10)',
             border: copied ? '1px solid rgba(34,197,94,0.3)' : '1px solid rgba(124,58,237,0.2)',
@@ -292,11 +349,10 @@ export const Profile: React.FC = () => {
         </motion.button>
         <p className="text-[10px] text-muted-foreground text-center">Paste this in Study Group so friends see your score on the leaderboard</p>
 
-        {/* Refer app */}
         <motion.button
           whileTap={{ scale: 0.96 }}
           onClick={handleReferApp}
-          className="w-full py-3 rounded-2xl font-bold text-sm text-white flex items-center justify-center gap-2"
+          className="w-full py-2.5 rounded-2xl font-bold text-sm text-white flex items-center justify-center gap-2"
           style={{ background: 'linear-gradient(135deg, #7c3aed, #06b6d4)', boxShadow: '0 4px 16px rgba(124,58,237,0.35)' }}
         >
           {shared ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
