@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useStore } from '@/hooks/use-store';
+import { useAuth } from '@/contexts/auth-context';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Camera, User, Save, Flame, CheckSquare, BarChart3, Trophy, Copy, Check,
-  Share2, Target, Star, BookOpen, Zap, Heart, Pencil, X
+  Share2, Target, Star, BookOpen, Zap, Heart, Pencil, X, LogOut
 } from 'lucide-react';
 
 const pageVariants = {
@@ -25,14 +26,16 @@ function getRank(pct: number) {
 }
 
 export const Profile: React.FC = () => {
-  const { profile, updateProfile, streak, getTotalProgress, todos, generateShareCode, getSubjectProgress } = useStore();
+  const { profile, updateProfile, streak, getTotalProgress, todos, generateShareCode, getSubjectProgress, targetScore, updateTargetScore } = useStore();
+  const { logout } = useAuth();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(profile.name);
   const [avatar, setAvatar] = useState<string | null>(profile.avatar);
-  const [targetScore, setTargetScore] = useState(() => localStorage.getItem('neet_target') || '650');
+  const [localTargetScore, setLocalTargetScore] = useState(targetScore);
   const [saved, setSaved] = useState(false);
   const [copied, setCopied] = useState(false);
   const [shared, setShared] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const totalPct = Math.round(getTotalProgress());
   const doneTodos = todos.filter(t => t.completed).length;
@@ -51,6 +54,10 @@ export const Profile: React.FC = () => {
     setAvatar(profile.avatar);
   }, [profile]);
 
+  useEffect(() => {
+    setLocalTargetScore(targetScore);
+  }, [targetScore]);
+
   const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -61,7 +68,7 @@ export const Profile: React.FC = () => {
 
   const handleSave = () => {
     updateProfile(name.trim(), avatar);
-    localStorage.setItem('neet_target', targetScore);
+    updateTargetScore(localTargetScore);
     setSaved(true);
     setTimeout(() => {
       setSaved(false);
@@ -72,6 +79,7 @@ export const Profile: React.FC = () => {
   const handleCancelEdit = () => {
     setName(profile.name);
     setAvatar(profile.avatar);
+    setLocalTargetScore(targetScore);
     setEditing(false);
   };
 
@@ -91,6 +99,12 @@ export const Profile: React.FC = () => {
       setShared(true);
       setTimeout(() => setShared(false), 2500);
     }
+  };
+
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    await logout().catch(() => {});
+    setLoggingOut(false);
   };
 
   const displayName = profile.name?.trim() || 'NEET Aspirant';
@@ -148,7 +162,7 @@ export const Profile: React.FC = () => {
             <div className="text-[10px] text-muted-foreground mt-0.5 font-medium">NEET 2027 Aspirant</div>
           </div>
 
-          {/* Right side: progress + edit button */}
+          {/* Right side: progress + edit + logout */}
           <div className="flex-shrink-0 flex flex-col items-center gap-2">
             <div className="text-center">
               <div
@@ -159,15 +173,26 @@ export const Profile: React.FC = () => {
               </div>
               <div className="text-[9px] text-muted-foreground font-bold uppercase tracking-wide">Done</div>
             </div>
-            {/* Edit button */}
-            <motion.button
-              whileTap={{ scale: 0.9 }}
-              onClick={() => setEditing(true)}
-              className="w-8 h-8 rounded-xl flex items-center justify-center text-white"
-              style={{ background: 'linear-gradient(135deg, #7c3aed, #06b6d4)', boxShadow: '0 3px 10px rgba(124,58,237,0.4)' }}
-            >
-              <Pencil className="w-3.5 h-3.5" />
-            </motion.button>
+            <div className="flex gap-1.5">
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                onClick={() => setEditing(true)}
+                className="w-8 h-8 rounded-xl flex items-center justify-center text-white"
+                style={{ background: 'linear-gradient(135deg, #7c3aed, #06b6d4)', boxShadow: '0 3px 10px rgba(124,58,237,0.4)' }}
+              >
+                <Pencil className="w-3.5 h-3.5" />
+              </motion.button>
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                onClick={handleLogout}
+                disabled={loggingOut}
+                className="w-8 h-8 rounded-xl flex items-center justify-center"
+                style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.2)', color: '#f87171' }}
+                title="Log out"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </motion.button>
+            </div>
           </div>
         </div>
       </div>
@@ -189,7 +214,6 @@ export const Profile: React.FC = () => {
                 </button>
               </div>
 
-              {/* Avatar edit row */}
               <div className="flex items-center gap-3">
                 <div
                   className="w-12 h-12 rounded-2xl overflow-hidden flex items-center justify-center text-white text-sm font-black flex-shrink-0"
@@ -228,8 +252,8 @@ export const Profile: React.FC = () => {
                 <Target className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
                 <input
                   type="number"
-                  value={targetScore}
-                  onChange={e => setTargetScore(e.target.value)}
+                  value={localTargetScore}
+                  onChange={e => setLocalTargetScore(e.target.value)}
                   placeholder="Target score (e.g. 680)"
                   min={0} max={720}
                   className="w-full pl-9 pr-4 py-2.5 rounded-2xl text-sm font-medium text-foreground placeholder:text-muted-foreground/40 outline-none"
@@ -363,6 +387,22 @@ export const Profile: React.FC = () => {
           Help a fellow aspirant prepare for NEET 2027!
         </p>
       </div>
+
+      {/* ── Logout ── */}
+      <motion.button
+        whileTap={{ scale: 0.97 }}
+        onClick={handleLogout}
+        disabled={loggingOut}
+        className="w-full py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2"
+        style={{
+          background: 'rgba(239,68,68,0.08)',
+          border: '1px solid rgba(239,68,68,0.18)',
+          color: '#f87171',
+        }}
+      >
+        <LogOut className="w-4 h-4" />
+        {loggingOut ? 'Logging out...' : 'Log Out'}
+      </motion.button>
 
     </motion.div>
   );

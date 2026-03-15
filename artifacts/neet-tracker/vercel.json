@@ -1,0 +1,7 @@
+{
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
+  "outputDirectory": "dist/public",
+  "buildCommand": "BASE_PATH=/ vite build --config vite.config.ts",
+  "installCommand": "cd ../.. && pnpm install",
+  "framework": null
+}
