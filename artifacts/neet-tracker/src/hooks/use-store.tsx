@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { SubjectId, TaskId, SYLLABUS, TASKS } from '@/lib/syllabus';
 import { isToday, isYesterday } from 'date-fns';
 import { generateId } from '@/lib/utils';
@@ -67,17 +69,15 @@ interface StoreContextType {
   setTestDate: (date: string | null) => void;
   studyTimeToday: number;
   addStudyTime: (seconds: number) => void;
+  targetScore: string;
+  updateTargetScore: (score: string) => void;
+  dataLoading: boolean;
 }
 
 const StoreContext = createContext<StoreContextType | null>(null);
 
-const safeParse = (data: string | null, fallback: any) => {
-  if (!data) return fallback;
-  try { return JSON.parse(data); } catch { return fallback; }
-};
-
-export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [isClient, setIsClient] = useState(false);
+export const StoreProvider: React.FC<{ children: React.ReactNode; userId: string }> = ({ children, userId }) => {
+  const [dataLoading, setDataLoading] = useState(true);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [progress, setProgress] = useState<ProgressMap>({} as ProgressMap);
   const [todos, setTodos] = useState<Todo[]>([]);
@@ -86,39 +86,60 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [studyGroup, setStudyGroup] = useState<StudyGroup | null>(null);
   const [testDate, setTestDateState] = useState<string | null>(null);
   const [studyTimeToday, setStudyTimeToday] = useState<number>(0);
+  const [targetScore, setTargetScoreState] = useState<string>('650');
+
+  const userDocRef = useMemo(() => doc(db, 'users', userId), [userId]);
+
+  const saveField = useCallback(
+    (field: string, value: any) => {
+      setDoc(userDocRef, { [field]: value }, { merge: true }).catch(console.error);
+    },
+    [userDocRef]
+  );
 
   useEffect(() => {
-    setIsClient(true);
-    const savedTheme = localStorage.getItem('neet_theme') as 'dark' | 'light';
-    const initialTheme = savedTheme || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-    setTheme(initialTheme);
-    document.documentElement.classList.toggle('dark', initialTheme === 'dark');
-    setProgress(safeParse(localStorage.getItem('neet_progress'), {}));
-    setTodos(safeParse(localStorage.getItem('neet_todos'), []));
-    const savedStreak = safeParse(localStorage.getItem('neet_streak'), { currentStreak: 0, lastActiveDate: null });
-    if (savedStreak.lastActiveDate) {
-      const lastDate = new Date(savedStreak.lastActiveDate);
-      if (!isToday(lastDate) && !isYesterday(lastDate)) savedStreak.currentStreak = 0;
-    }
-    setStreak(savedStreak);
-    setProfile(safeParse(localStorage.getItem('neet_profile'), { name: '', avatar: null }));
-    const savedGroup = safeParse(localStorage.getItem('neet_study_group'), null);
-    if (savedGroup) setStudyGroup(savedGroup);
-    setTestDateState(localStorage.getItem('neet_test_date') || null);
+    setDataLoading(true);
+    getDoc(userDocRef)
+      .then((snap) => {
+        if (snap.exists()) {
+          const data = snap.data();
 
-    // Study time today
-    const todayKey = new Date().toDateString();
-    const savedStudyRaw = localStorage.getItem('neet_study_time');
-    const savedStudy = safeParse(savedStudyRaw, { date: '', seconds: 0 });
-    if (savedStudy.date === todayKey) {
-      setStudyTimeToday(savedStudy.seconds || 0);
-    } else {
-      setStudyTimeToday(0);
-    }
-  }, []);
+          const t = (data.theme as 'dark' | 'light') || 'dark';
+          setTheme(t);
+          document.documentElement.classList.toggle('dark', t === 'dark');
+          localStorage.setItem('neet_theme', t);
+
+          setProgress(data.progress || {});
+          setTodos(data.todos || []);
+
+          const savedStreak = data.streak || { currentStreak: 0, lastActiveDate: null };
+          if (savedStreak.lastActiveDate) {
+            const lastDate = new Date(savedStreak.lastActiveDate);
+            if (!isToday(lastDate) && !isYesterday(lastDate)) savedStreak.currentStreak = 0;
+          }
+          setStreak(savedStreak);
+
+          setProfile(data.profile || { name: '', avatar: null });
+          setStudyGroup(data.studyGroup || null);
+          setTestDateState(data.testDate || null);
+          setTargetScoreState(data.targetScore || '650');
+
+          const studyData = data.studyTime || { date: '', seconds: 0 };
+          if (studyData.date === new Date().toDateString()) {
+            setStudyTimeToday(studyData.seconds || 0);
+          }
+        } else {
+          const initialTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+          setTheme(initialTheme);
+          document.documentElement.classList.toggle('dark', initialTheme === 'dark');
+        }
+      })
+      .catch(console.error)
+      .finally(() => setDataLoading(false));
+  }, [userId]);
 
   const updateStreak = useCallback(() => {
-    setStreak(prev => {
+    setStreak((prev) => {
       const today = new Date();
       let newStreak = prev.currentStreak;
       if (!prev.lastActiveDate) {
@@ -129,261 +150,294 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         else if (!isToday(lastDate)) newStreak = 1;
       }
       const updated = { currentStreak: newStreak, lastActiveDate: today.toISOString() };
-      localStorage.setItem('neet_streak', JSON.stringify(updated));
+      saveField('streak', updated);
       return updated;
     });
-  }, []);
+  }, [saveField]);
 
   const toggleTheme = () => {
-    setTheme(prev => {
+    setTheme((prev) => {
       const next = prev === 'dark' ? 'light' : 'dark';
       localStorage.setItem('neet_theme', next);
       document.documentElement.classList.toggle('dark', next === 'dark');
+      saveField('theme', next);
       return next;
     });
   };
 
   const toggleTask = (subject: SubjectId, chapter: string, task: TaskId) => {
-    setProgress(prev => {
+    setProgress((prev) => {
       const subProg = prev[subject] || {};
       const chapProg = subProg[chapter] || {};
       const newProg = {
         ...prev,
-        [subject]: { ...subProg, [chapter]: { ...chapProg, [task]: !chapProg[task] } }
+        [subject]: { ...subProg, [chapter]: { ...chapProg, [task]: !chapProg[task] } },
       };
-      localStorage.setItem('neet_progress', JSON.stringify(newProg));
+      saveField('progress', newProg);
       return newProg;
     });
     updateStreak();
   };
 
   const addTodo = (title: string, description: string = '') => {
-    const newTodo: Todo = { id: generateId(), title, description, completed: false, createdAt: new Date().toISOString() };
-    setTodos(prev => {
+    const newTodo: Todo = {
+      id: generateId(),
+      title,
+      description,
+      completed: false,
+      createdAt: new Date().toISOString(),
+    };
+    setTodos((prev) => {
       const next = [newTodo, ...prev];
-      localStorage.setItem('neet_todos', JSON.stringify(next));
+      saveField('todos', next);
       return next;
     });
     updateStreak();
   };
 
   const updateTodo = (id: string, updates: Partial<Todo>) => {
-    setTodos(prev => {
-      const next = prev.map(t => t.id === id ? { ...t, ...updates } : t);
-      localStorage.setItem('neet_todos', JSON.stringify(next));
+    setTodos((prev) => {
+      const next = prev.map((t) => (t.id === id ? { ...t, ...updates } : t));
+      saveField('todos', next);
       return next;
     });
     updateStreak();
   };
 
   const deleteTodo = (id: string) => {
-    setTodos(prev => {
-      const next = prev.filter(t => t.id !== id);
-      localStorage.setItem('neet_todos', JSON.stringify(next));
+    setTodos((prev) => {
+      const next = prev.filter((t) => t.id !== id);
+      saveField('todos', next);
       return next;
     });
   };
 
   const toggleTodo = (id: string) => {
-    setTodos(prev => {
-      const next = prev.map(t => t.id === id ? { ...t, completed: !t.completed } : t);
-      localStorage.setItem('neet_todos', JSON.stringify(next));
+    setTodos((prev) => {
+      const next = prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t));
+      saveField('todos', next);
       return next;
     });
     updateStreak();
   };
 
-  const getChapterProgress = useCallback((subject: SubjectId, chapter: string) => {
-    const chapProg = progress[subject]?.[chapter] || {};
-    const completed = TASKS.filter(t => chapProg[t]).length;
-    return (completed / TASKS.length) * 100;
-  }, [progress]);
+  const getChapterProgress = useCallback(
+    (subject: SubjectId, chapter: string) => {
+      const chapProg = progress[subject]?.[chapter] || {};
+      const completed = TASKS.filter((t) => chapProg[t]).length;
+      return (completed / TASKS.length) * 100;
+    },
+    [progress]
+  );
 
-  const getSubjectProgress = useCallback((subject: SubjectId) => {
-    const chaps = [...SYLLABUS[subject].class11, ...SYLLABUS[subject].class12];
-    if (chaps.length === 0) return 0;
-    let totalPct = 0;
-    chaps.forEach(c => { totalPct += getChapterProgress(subject, c); });
-    return totalPct / chaps.length;
-  }, [getChapterProgress]);
+  const getSubjectProgress = useCallback(
+    (subject: SubjectId) => {
+      const chaps = [...SYLLABUS[subject].class11, ...SYLLABUS[subject].class12];
+      if (chaps.length === 0) return 0;
+      let totalPct = 0;
+      chaps.forEach((c) => { totalPct += getChapterProgress(subject, c); });
+      return totalPct / chaps.length;
+    },
+    [getChapterProgress]
+  );
 
   const getTotalProgress = useCallback(() => {
     const subjects: SubjectId[] = ['physics', 'chemistry', 'botany', 'zoology'];
     let total = 0;
-    subjects.forEach(s => total += getSubjectProgress(s));
+    subjects.forEach((s) => { total += getSubjectProgress(s); });
     return total / subjects.length;
   }, [getSubjectProgress]);
 
-  const getCompletedChapters = useCallback((subject: SubjectId) => {
-    const chaps = [...SYLLABUS[subject].class11, ...SYLLABUS[subject].class12];
-    return chaps.filter(c => getChapterProgress(subject, c) === 100).length;
-  }, [getChapterProgress]);
+  const getCompletedChapters = useCallback(
+    (subject: SubjectId) => {
+      const chaps = [...SYLLABUS[subject].class11, ...SYLLABUS[subject].class12];
+      return chaps.filter((c) => getChapterProgress(subject, c) === 100).length;
+    },
+    [getChapterProgress]
+  );
 
   const getTotalChapters = useCallback((subject: SubjectId) => {
     return SYLLABUS[subject].class11.length + SYLLABUS[subject].class12.length;
   }, []);
 
-  const updateProfile = useCallback((name: string, avatar: string | null) => {
-    const updated: Profile = { name, avatar };
-    setProfile(updated);
-    localStorage.setItem('neet_profile', JSON.stringify(updated));
-  }, []);
+  const updateProfile = useCallback(
+    (name: string, avatar: string | null) => {
+      const updated: Profile = { name, avatar };
+      setProfile(updated);
+      saveField('profile', updated);
+    },
+    [saveField]
+  );
 
-  const setTestDate = useCallback((date: string | null) => {
-    setTestDateState(date);
-    if (date) {
-      localStorage.setItem('neet_test_date', date);
-    } else {
-      localStorage.removeItem('neet_test_date');
-    }
-  }, []);
+  const updateTargetScore = useCallback(
+    (score: string) => {
+      setTargetScoreState(score);
+      saveField('targetScore', score);
+    },
+    [saveField]
+  );
 
-  const addStudyTime = useCallback((seconds: number) => {
-    setStudyTimeToday(prev => {
-      const next = prev + seconds;
-      const todayKey = new Date().toDateString();
-      localStorage.setItem('neet_study_time', JSON.stringify({ date: todayKey, seconds: next }));
-      return next;
-    });
-    updateStreak();
-  }, [updateStreak]);
+  const setTestDate = useCallback(
+    (date: string | null) => {
+      setTestDateState(date);
+      saveField('testDate', date ?? null);
+    },
+    [saveField]
+  );
+
+  const addStudyTime = useCallback(
+    (seconds: number) => {
+      setStudyTimeToday((prev) => {
+        const next = prev + seconds;
+        const todayKey = new Date().toDateString();
+        saveField('studyTime', { date: todayKey, seconds: next });
+        return next;
+      });
+      updateStreak();
+    },
+    [updateStreak, saveField]
+  );
 
   const getMyProgressValue = useCallback(() => {
     const subjects: SubjectId[] = ['physics', 'chemistry', 'botany', 'zoology'];
     let total = 0;
-    subjects.forEach(s => total += getSubjectProgress(s));
+    subjects.forEach((s) => { total += getSubjectProgress(s); });
     return Math.round(total / subjects.length);
   }, [getSubjectProgress]);
 
-  const joinGroup = useCallback((code: string) => {
-    const normalCode = code.trim().toUpperCase();
-    const existingRaw = localStorage.getItem(`neet_group_${normalCode}`);
-    const existing: StudyGroup = existingRaw ? JSON.parse(existingRaw) : { code: normalCode, members: [] };
-    const myId = localStorage.getItem('neet_my_id') || (() => {
-      const id = generateId();
-      localStorage.setItem('neet_my_id', id);
-      return id;
-    })();
-    const myPct = getMyProgressValue();
-    const savedProfile = safeParse(localStorage.getItem('neet_profile'), { name: '', avatar: null });
-    const todayStudy = (() => {
-      try {
-        const raw = localStorage.getItem('neet_study_time');
-        const d = raw ? JSON.parse(raw) : null;
-        return d && d.date === new Date().toDateString() ? (d.seconds || 0) : 0;
-      } catch { return 0; }
-    })();
-    const myMember: GroupMember = {
-      id: myId,
-      name: savedProfile.name || 'You',
-      avatar: savedProfile.avatar,
-      progress: myPct,
-      studyTimeToday: todayStudy,
-      updatedAt: new Date().toISOString(),
-      isMe: true,
-    };
-    const others = existing.members.filter(m => m.id !== myId);
-    const updated: StudyGroup = { code: normalCode, members: [myMember, ...others] };
-    localStorage.setItem(`neet_group_${normalCode}`, JSON.stringify(updated));
-    localStorage.setItem('neet_study_group', JSON.stringify(updated));
-    setStudyGroup(updated);
-  }, [getMyProgressValue]);
+  const joinGroup = useCallback(
+    (code: string) => {
+      const normalCode = code.trim().toUpperCase();
+      const myPct = getMyProgressValue();
+      const myMember: GroupMember = {
+        id: userId,
+        name: profile.name || 'You',
+        avatar: profile.avatar,
+        progress: myPct,
+        studyTimeToday,
+        updatedAt: new Date().toISOString(),
+        isMe: true,
+      };
+      const newGroup: StudyGroup = { code: normalCode, members: [myMember] };
+      setStudyGroup(newGroup);
+      saveField('studyGroup', newGroup);
+    },
+    [userId, profile, studyTimeToday, getMyProgressValue, saveField]
+  );
 
   const leaveGroup = useCallback(() => {
-    localStorage.removeItem('neet_study_group');
     setStudyGroup(null);
-  }, []);
+    saveField('studyGroup', null);
+  }, [saveField]);
 
   const syncMyProgress = useCallback(() => {
-    setStudyGroup(prev => {
+    setStudyGroup((prev) => {
       if (!prev) return prev;
-      const myId = localStorage.getItem('neet_my_id');
       const myPct = getMyProgressValue();
-      const savedProfile = safeParse(localStorage.getItem('neet_profile'), { name: '', avatar: null });
-      const todayStudy = (() => {
-        try {
-          const raw = localStorage.getItem('neet_study_time');
-          const d = raw ? JSON.parse(raw) : null;
-          return d && d.date === new Date().toDateString() ? (d.seconds || 0) : 0;
-        } catch { return 0; }
-      })();
       const updated: StudyGroup = {
         ...prev,
-        members: prev.members.map(m =>
-          m.id === myId
-            ? { ...m, name: savedProfile.name || m.name, avatar: savedProfile.avatar, progress: myPct, studyTimeToday: todayStudy, updatedAt: new Date().toISOString() }
+        members: prev.members.map((m) =>
+          m.id === userId
+            ? {
+                ...m,
+                name: profile.name || m.name,
+                avatar: profile.avatar,
+                progress: myPct,
+                studyTimeToday,
+                updatedAt: new Date().toISOString(),
+              }
             : m
         ),
       };
-      localStorage.setItem(`neet_group_${prev.code}`, JSON.stringify(updated));
-      localStorage.setItem('neet_study_group', JSON.stringify(updated));
+      saveField('studyGroup', updated);
       return updated;
     });
-  }, [getMyProgressValue]);
+  }, [userId, profile, studyTimeToday, getMyProgressValue, saveField]);
 
   const generateShareCode = useCallback((): string => {
-    const myId = localStorage.getItem('neet_my_id') || generateId();
-    localStorage.setItem('neet_my_id', myId);
-    const savedProfile = safeParse(localStorage.getItem('neet_profile'), { name: '', avatar: null });
-    const todayStudy = (() => {
-      try {
-        const raw = localStorage.getItem('neet_study_time');
-        const d = raw ? JSON.parse(raw) : null;
-        return d && d.date === new Date().toDateString() ? (d.seconds || 0) : 0;
-      } catch { return 0; }
-    })();
     const payload: GroupMember = {
-      id: myId,
-      name: savedProfile.name || 'Friend',
-      avatar: savedProfile.avatar,
+      id: userId,
+      name: profile.name || 'Friend',
+      avatar: profile.avatar,
       progress: getMyProgressValue(),
-      studyTimeToday: todayStudy,
+      studyTimeToday,
       updatedAt: new Date().toISOString(),
     };
     return btoa(JSON.stringify(payload));
-  }, [getMyProgressValue]);
+  }, [userId, profile, studyTimeToday, getMyProgressValue]);
 
-  const importGroupMember = useCallback((shareCode: string): boolean => {
-    try {
-      const member: GroupMember = JSON.parse(atob(shareCode.trim()));
-      if (!member.id || typeof member.progress !== 'number') return false;
-      setStudyGroup(prev => {
+  const importGroupMember = useCallback(
+    (shareCode: string): boolean => {
+      try {
+        const member: GroupMember = JSON.parse(atob(shareCode.trim()));
+        if (!member.id || typeof member.progress !== 'number') return false;
+        setStudyGroup((prev) => {
+          if (!prev) return prev;
+          const others = prev.members.filter((m) => m.id !== member.id);
+          const updated: StudyGroup = {
+            ...prev,
+            members: [...others, { ...member, isMe: false }],
+          };
+          saveField('studyGroup', updated);
+          return updated;
+        });
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    [saveField]
+  );
+
+  const removeGroupMember = useCallback(
+    (id: string) => {
+      setStudyGroup((prev) => {
         if (!prev) return prev;
-        const others = prev.members.filter(m => m.id !== member.id);
-        const updated: StudyGroup = { ...prev, members: [...others, { ...member, isMe: false }] };
-        localStorage.setItem(`neet_group_${prev.code}`, JSON.stringify(updated));
-        localStorage.setItem('neet_study_group', JSON.stringify(updated));
+        const updated: StudyGroup = {
+          ...prev,
+          members: prev.members.filter((m) => m.id !== id),
+        };
+        saveField('studyGroup', updated);
         return updated;
       });
-      return true;
-    } catch { return false; }
-  }, []);
+    },
+    [saveField]
+  );
 
-  const removeGroupMember = useCallback((id: string) => {
-    setStudyGroup(prev => {
-      if (!prev) return prev;
-      const updated: StudyGroup = { ...prev, members: prev.members.filter(m => m.id !== id) };
-      localStorage.setItem(`neet_group_${prev.code}`, JSON.stringify(updated));
-      localStorage.setItem('neet_study_group', JSON.stringify(updated));
-      return updated;
-    });
-  }, []);
-
-  if (!isClient) return null;
+  if (dataLoading) {
+    return (
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ background: 'linear-gradient(160deg, #0e0b1e 0%, #0f172a 60%, #0b1120 100%)' }}
+      >
+        <div className="text-center space-y-4">
+          <div className="w-12 h-12 rounded-2xl mx-auto flex items-center justify-center"
+            style={{ background: 'linear-gradient(135deg, #7c3aed, #06b6d4)', boxShadow: '0 8px 24px rgba(124,58,237,0.4)' }}>
+            <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin block" />
+          </div>
+          <p className="text-sm text-slate-400 font-medium">Loading your progress...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <StoreContext.Provider value={{
-      theme, toggleTheme,
-      progress, toggleTask,
-      todos, addTodo, updateTodo, deleteTodo, toggleTodo,
-      streak,
-      getChapterProgress, getSubjectProgress, getTotalProgress,
-      getCompletedChapters, getTotalChapters,
-      profile, updateProfile,
-      studyGroup, joinGroup, leaveGroup, importGroupMember, removeGroupMember, generateShareCode, syncMyProgress,
-      testDate, setTestDate,
-      studyTimeToday, addStudyTime,
-    }}>
+    <StoreContext.Provider
+      value={{
+        theme, toggleTheme,
+        progress, toggleTask,
+        todos, addTodo, updateTodo, deleteTodo, toggleTodo,
+        streak,
+        getChapterProgress, getSubjectProgress, getTotalProgress,
+        getCompletedChapters, getTotalChapters,
+        profile, updateProfile,
+        studyGroup, joinGroup, leaveGroup, importGroupMember, removeGroupMember, generateShareCode, syncMyProgress,
+        testDate, setTestDate,
+        studyTimeToday, addStudyTime,
+        targetScore, updateTargetScore,
+        dataLoading,
+      }}
+    >
       {children}
     </StoreContext.Provider>
   );
