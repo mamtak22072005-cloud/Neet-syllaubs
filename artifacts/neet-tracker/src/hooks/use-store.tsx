@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { ref, get, update } from 'firebase/database';
 import { db } from '@/lib/firebase';
 import { SubjectId, TaskId, SYLLABUS, TASKS } from '@/lib/syllabus';
 import { isToday, isYesterday } from 'date-fns';
@@ -76,6 +76,12 @@ interface StoreContextType {
 
 const StoreContext = createContext<StoreContextType | null>(null);
 
+const toArray = <T,>(val: any): T[] => {
+  if (!val) return [];
+  if (Array.isArray(val)) return val;
+  return Object.values(val);
+};
+
 export const StoreProvider: React.FC<{ children: React.ReactNode; userId: string }> = ({ children, userId }) => {
   const [dataLoading, setDataLoading] = useState(true);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
@@ -88,21 +94,21 @@ export const StoreProvider: React.FC<{ children: React.ReactNode; userId: string
   const [studyTimeToday, setStudyTimeToday] = useState<number>(0);
   const [targetScore, setTargetScoreState] = useState<string>('650');
 
-  const userDocRef = useMemo(() => doc(db, 'users', userId), [userId]);
+  const userRef = useMemo(() => ref(db, 'users/' + userId), [userId]);
 
   const saveField = useCallback(
     (field: string, value: any) => {
-      setDoc(userDocRef, { [field]: value }, { merge: true }).catch(console.error);
+      update(userRef, { [field]: value ?? null }).catch(console.error);
     },
-    [userDocRef]
+    [userRef]
   );
 
   useEffect(() => {
     setDataLoading(true);
-    getDoc(userDocRef)
+    get(userRef)
       .then((snap) => {
         if (snap.exists()) {
-          const data = snap.data();
+          const data = snap.val() as Record<string, any>;
 
           const t = (data.theme as 'dark' | 'light') || 'dark';
           setTheme(t);
@@ -110,7 +116,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode; userId: string
           localStorage.setItem('neet_theme', t);
 
           setProgress(data.progress || {});
-          setTodos(data.todos || []);
+          setTodos(toArray<Todo>(data.todos));
 
           const savedStreak = data.streak || { currentStreak: 0, lastActiveDate: null };
           if (savedStreak.lastActiveDate) {
@@ -119,8 +125,19 @@ export const StoreProvider: React.FC<{ children: React.ReactNode; userId: string
           }
           setStreak(savedStreak);
 
-          setProfile(data.profile || { name: '', avatar: null });
-          setStudyGroup(data.studyGroup || null);
+          setProfile({
+            name: data.profile?.name || '',
+            avatar: data.profile?.avatar || null,
+          });
+
+          if (data.studyGroup) {
+            const sg = data.studyGroup;
+            setStudyGroup({
+              code: sg.code,
+              members: toArray<GroupMember>(sg.members),
+            });
+          }
+
           setTestDateState(data.testDate || null);
           setTargetScoreState(data.targetScore || '650');
 
@@ -262,7 +279,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode; userId: string
 
   const updateProfile = useCallback(
     (name: string, avatar: string | null) => {
-      const updated: Profile = { name, avatar };
+      const updated: Profile = { name, avatar: avatar || null };
       setProfile(updated);
       saveField('profile', updated);
     },
@@ -280,7 +297,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode; userId: string
   const setTestDate = useCallback(
     (date: string | null) => {
       setTestDateState(date);
-      saveField('testDate', date ?? null);
+      saveField('testDate', date);
     },
     [saveField]
   );
@@ -320,7 +337,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode; userId: string
       };
       const newGroup: StudyGroup = { code: normalCode, members: [myMember] };
       setStudyGroup(newGroup);
-      saveField('studyGroup', newGroup);
+      saveField('studyGroup', { code: normalCode, members: [myMember] });
     },
     [userId, profile, studyTimeToday, getMyProgressValue, saveField]
   );
@@ -334,22 +351,20 @@ export const StoreProvider: React.FC<{ children: React.ReactNode; userId: string
     setStudyGroup((prev) => {
       if (!prev) return prev;
       const myPct = getMyProgressValue();
-      const updated: StudyGroup = {
-        ...prev,
-        members: prev.members.map((m) =>
-          m.id === userId
-            ? {
-                ...m,
-                name: profile.name || m.name,
-                avatar: profile.avatar,
-                progress: myPct,
-                studyTimeToday,
-                updatedAt: new Date().toISOString(),
-              }
-            : m
-        ),
-      };
-      saveField('studyGroup', updated);
+      const updatedMembers = prev.members.map((m) =>
+        m.id === userId
+          ? {
+              ...m,
+              name: profile.name || m.name,
+              avatar: profile.avatar,
+              progress: myPct,
+              studyTimeToday,
+              updatedAt: new Date().toISOString(),
+            }
+          : m
+      );
+      const updated: StudyGroup = { ...prev, members: updatedMembers };
+      saveField('studyGroup', { code: updated.code, members: updatedMembers });
       return updated;
     });
   }, [userId, profile, studyTimeToday, getMyProgressValue, saveField]);
@@ -374,11 +389,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode; userId: string
         setStudyGroup((prev) => {
           if (!prev) return prev;
           const others = prev.members.filter((m) => m.id !== member.id);
-          const updated: StudyGroup = {
-            ...prev,
-            members: [...others, { ...member, isMe: false }],
-          };
-          saveField('studyGroup', updated);
+          const updatedMembers = [...others, { ...member, isMe: false }];
+          const updated: StudyGroup = { ...prev, members: updatedMembers };
+          saveField('studyGroup', { code: updated.code, members: updatedMembers });
           return updated;
         });
         return true;
@@ -393,11 +406,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode; userId: string
     (id: string) => {
       setStudyGroup((prev) => {
         if (!prev) return prev;
-        const updated: StudyGroup = {
-          ...prev,
-          members: prev.members.filter((m) => m.id !== id),
-        };
-        saveField('studyGroup', updated);
+        const updatedMembers = prev.members.filter((m) => m.id !== id);
+        const updated: StudyGroup = { ...prev, members: updatedMembers };
+        saveField('studyGroup', { code: updated.code, members: updatedMembers });
         return updated;
       });
     },
@@ -411,8 +422,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode; userId: string
         style={{ background: 'linear-gradient(160deg, #0e0b1e 0%, #0f172a 60%, #0b1120 100%)' }}
       >
         <div className="text-center space-y-4">
-          <div className="w-12 h-12 rounded-2xl mx-auto flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg, #7c3aed, #06b6d4)', boxShadow: '0 8px 24px rgba(124,58,237,0.4)' }}>
+          <div
+            className="w-12 h-12 rounded-2xl mx-auto flex items-center justify-center"
+            style={{ background: 'linear-gradient(135deg, #7c3aed, #06b6d4)', boxShadow: '0 8px 24px rgba(124,58,237,0.4)' }}
+          >
             <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin block" />
           </div>
           <p className="text-sm text-slate-400 font-medium">Loading your progress...</p>
