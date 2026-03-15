@@ -1,0 +1,7 @@
+{
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
+  "outputDirectory": "artifacts/neet-tracker/dist/public",
+  "buildCommand": "BASE_PATH=/ pnpm --filter @workspace/neet-tracker run build",
+  "installCommand": "pnpm install",
+  "framework": null
+}
